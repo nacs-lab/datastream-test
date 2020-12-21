@@ -111,7 +111,7 @@ struct Kernel {
     static NACS_NOINLINE __attribute__((target("sse2"),flatten))
     void calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp)
     {
-        ncalc = ncalc / 2;
+        ncalc = ncalc / 4;
         asm volatile ("" : "+r"(nrep) :: "memory");
         asm volatile ("" : "+r"(ncalc) :: "memory");
         auto tp = _mm_set1_ps(t);
@@ -157,7 +157,7 @@ struct Kernel {
     static NACS_NOINLINE __attribute__((target("avx"),flatten))
     void calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp)
     {
-        ncalc = ncalc / 4;
+        ncalc = ncalc / 8;
         asm volatile ("" : "+r"(nrep) :: "memory");
         asm volatile ("" : "+r"(ncalc) :: "memory");
         auto tp = _mm256_set1_ps(t);
@@ -198,7 +198,7 @@ struct Kernel {
     static NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
     void calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp)
     {
-        ncalc = ncalc / 4;
+        ncalc = ncalc / 8;
         asm volatile ("" : "+r"(nrep) :: "memory");
         asm volatile ("" : "+r"(ncalc) :: "memory");
         auto tp = _mm256_set1_ps(t);
@@ -239,7 +239,7 @@ struct Kernel {
     static NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
     void calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp)
     {
-        ncalc = ncalc / 8;
+        ncalc = ncalc / 16;
         asm volatile ("" : "+r"(nrep) :: "memory");
         asm volatile ("" : "+r"(ncalc) :: "memory");
         auto tp = _mm512_set1_ps(t);

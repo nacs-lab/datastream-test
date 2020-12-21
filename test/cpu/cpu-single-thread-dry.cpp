@@ -59,21 +59,21 @@ static void runtests()
     if (host.test_feature(X86::Feature::avx512f) &&
         host.test_feature(X86::Feature::avx512dq)) {
         std::cout << "AVX512:" << std::endl;
-        time_run<avx512::Kernel>(32 * 1024, 1024 * 1024);
+        time_run<avx512::Kernel>(32 * 1024, 2 * 1024 * 1024);
         return;
     }
     if (host.test_feature(X86::Feature::avx2) && host.test_feature(X86::Feature::fma)) {
         std::cout << "AVX2:" << std::endl;
-        time_run<avx2::Kernel>(16 * 1024, 1024 * 1024);
+        time_run<avx2::Kernel>(16 * 1024, 2 * 1024 * 1024);
         return;
     }
     if (host.test_feature(X86::Feature::avx)) {
         std::cout << "AVX:" << std::endl;
-        time_run<avx::Kernel>(12 * 1024, 1024 * 1024);
+        time_run<avx::Kernel>(12 * 1024, 2 * 1024 * 1024);
         return;
     }
     std::cout << "SSE2:" << std::endl;
-    time_run<sse2::Kernel>(6 * 1024, 1024 * 1024);
+    time_run<sse2::Kernel>(6 * 1024, 2 * 1024 * 1024);
     return;
 #endif
 
