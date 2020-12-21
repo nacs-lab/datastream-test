@@ -88,6 +88,12 @@ static void runtests()
     return;
 #endif
 
+#if NACS_CPU_AARCH64
+    std::cout << "ASIMD:" << std::endl;
+    time_run<asimd::Kernel>(6 * 1024, 2 * 1024 * 1024);
+    return;
+#endif
+
     std::cout << "Scalar:" << std::endl;
     time_run<scalar::Kernel>(2 * 1024, 1024 * 1024);
 }

@@ -99,6 +99,64 @@ struct Kernel {
 
 } // namespace scalar
 
+#if NACS_CPU_AARCH64
+
+namespace asimd {
+static NACS_INLINE float32x4_t sinpif_pi(float32x4_t d)
+{
+    auto q = vcvtnq_s32_f32(d);
+    // Now `d` is the fractional part in the range `[-0.5, 0.5]`
+    d = d - vcvtq_f32_s32(q);
+    auto s = d * d;
+
+    // Shift the last bit of `q` to the sign bit
+    // and therefore flip the sign of `d` if `q` is odd
+    d = float32x4_t(vshlq_n_s32(q, 31) ^ int32x4_t(d));
+
+    auto u = -0.17818783f * s + 0.8098674f;
+    u = u * s - 1.6448531f;
+    return (s * d) * u + d;
+}
+
+struct Kernel {
+    static NACS_NOINLINE __attribute__((flatten))
+    void calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp)
+    {
+        ncalc = ncalc / 4;
+        asm volatile ("" : "+r"(nrep) :: "memory");
+        asm volatile ("" : "+r"(ncalc) :: "memory");
+        auto tp = vdupq_n_f32(t);
+        auto fp = vdupq_n_f32(freq);
+        auto ap = vdupq_n_f32(amp);
+        for (size_t j = 0; j < nrep; j++) {
+            for (size_t i = 0; i < ncalc; i++) {
+                asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
+                auto res = ap * sinpif_pi(tp * fp);
+                asm volatile ("" :: "w"(res) : "memory");
+            }
+        }
+    }
+    static NACS_NOINLINE __attribute__((flatten))
+    void calc_fill(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp)
+    {
+        ncalc = ncalc / 4;
+        asm volatile ("" : "+r"(nrep) :: "memory");
+        asm volatile ("" : "+r"(ncalc) :: "memory");
+        auto tp = vdupq_n_f32(t);
+        auto fp = vdupq_n_f32(freq);
+        auto ap = vdupq_n_f32(amp);
+        for (size_t j = 0; j < nrep; j++) {
+            for (size_t i = 0; i < ncalc; i++) {
+                asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
+                vst1q_f32(&buff[i * 4], ap * sinpif_pi(tp * fp));
+            }
+            asm volatile ("" :: "r"(buff) : "memory");
+        }
+    }
+};
+} // namespace asimd
+#endif
+
 #if NACS_CPU_X86 || NACS_CPU_X86_64
 
 namespace sse2 {
