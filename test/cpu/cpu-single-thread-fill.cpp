@@ -45,14 +45,20 @@ static void time_run(size_t nrep, size_t ncalc, float *buff)
     PerfCounter cycles(PerfCounter::CPUCycles);
     PerfCounter cacherefs(PerfCounter::CacheRefs);
     PerfCounter cachemisses(PerfCounter::CacheMisses);
+    PerfCounter stall_fe(PerfCounter::CPUStallFrontend);
+    PerfCounter stall_be(PerfCounter::CPUStallBackend);
     Kernel::calc_fill(1, ncalc, buff, t, freq, amp);
 
     insts.reset();
     cycles.reset();
     cachemisses.reset();
     cacherefs.reset();
+    stall_fe.reset();
+    stall_be.reset();
 
     timer.restart();
+    stall_be.start(false);
+    stall_fe.start(false);
     cacherefs.start(false);
     cachemisses.start(false);
     cycles.start(false);
@@ -63,15 +69,21 @@ static void time_run(size_t nrep, size_t ncalc, float *buff)
     cycles.stop();
     cachemisses.stop();
     cacherefs.stop();
+    stall_fe.stop();
+    stall_be.stop();
     auto tdry = (double)timer.elapsed() / (double)ncalc / (double)nrep;
     auto ninsts = (double)insts.finish(false) / (double)ncalc / (double)nrep;
     auto ncycles = (double)cycles.finish(false) / (double)ncalc / (double)nrep;
     auto ncachemisses = (double)cachemisses.finish(false) / (double)ncalc / (double)nrep;
     auto ncacherefs = (double)cacherefs.finish(false) / (double)ncalc / (double)nrep;
+    auto nstall_fe = (double)stall_fe.finish(false) / (double)ncalc / (double)nrep;
+    auto nstall_be = (double)stall_be.finish(false) / (double)ncalc / (double)nrep;
 
     std::cout << tdry << " ns, " << ninsts << " insts, "
-              << ncycles << " cycle, "
-              << ncacherefs << " cache refs, " << ncachemisses << " cache misses / ele"
+              << ncycles << " cycle," << std::endl;
+    std::cout << "  " << ncacherefs << " cache refs, " << ncachemisses << " cache misses,"
+              << std::endl;
+    std::cout << "  " << nstall_fe << " frontend stall, " << nstall_be << " backend stall"
               << std::endl;
 }
 
