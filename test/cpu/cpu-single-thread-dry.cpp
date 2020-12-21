@@ -58,7 +58,7 @@ static void time_run(size_t nrep, size_t ncalc)
     auto ninsts = (double)insts.finish(false) / (double)ncalc / (double)nrep;
     auto ncycles = (double)cycles.finish(false) / (double)ncalc / (double)nrep;
 
-    std::cout << "Dry: " << tdry << " ns, " << ninsts << " insts, "
+    std::cout << tdry << " ns, " << ninsts << " insts, "
               << ncycles << " cycle / ele" << std::endl;
 }
 
