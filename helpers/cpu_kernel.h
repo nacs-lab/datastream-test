@@ -82,6 +82,19 @@ struct Kernel {
             }
         }
     }
+    static NACS_NOINLINE __attribute__((flatten))
+    void calc_fill(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp)
+    {
+        asm volatile ("" : "+r"(nrep) :: "memory");
+        asm volatile ("" : "+r"(ncalc) :: "memory");
+        for (size_t j = 0; j < nrep; j++) {
+            for (size_t i = 0; i < ncalc; i++) {
+                asm volatile ("" : "+r"(t), "+r"(freq), "+r"(amp) :: "memory");
+                buff[i] = amp * sinpif_pi(t * freq);
+            }
+            asm volatile ("" :: "r"(buff) : "memory");
+        }
+    }
 };
 
 } // namespace scalar
@@ -123,6 +136,23 @@ struct Kernel {
                 auto res = ap * sinpif_pi(tp * fp);
                 asm volatile ("" :: "x"(res) : "memory");
             }
+        }
+    }
+    static NACS_NOINLINE __attribute__((target("sse2"),flatten))
+    void calc_fill(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp)
+    {
+        ncalc = ncalc / 4;
+        asm volatile ("" : "+r"(nrep) :: "memory");
+        asm volatile ("" : "+r"(ncalc) :: "memory");
+        auto tp = _mm_set1_ps(t);
+        auto fp = _mm_set1_ps(freq);
+        auto ap = _mm_set1_ps(amp);
+        for (size_t j = 0; j < nrep; j++) {
+            for (size_t i = 0; i < ncalc; i++) {
+                asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+                _mm_store_ps(&buff[i * 4], ap * sinpif_pi(tp * fp));
+            }
+            asm volatile ("" :: "r"(buff) : "memory");
         }
     }
 };
@@ -171,6 +201,23 @@ struct Kernel {
             }
         }
     }
+    static NACS_NOINLINE __attribute__((target("avx"),flatten))
+    void calc_fill(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp)
+    {
+        ncalc = ncalc / 8;
+        asm volatile ("" : "+r"(nrep) :: "memory");
+        asm volatile ("" : "+r"(ncalc) :: "memory");
+        auto tp = _mm256_set1_ps(t);
+        auto fp = _mm256_set1_ps(freq);
+        auto ap = _mm256_set1_ps(amp);
+        for (size_t j = 0; j < nrep; j++) {
+            for (size_t i = 0; i < ncalc; i++) {
+                asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+                _mm256_store_ps(&buff[i * 8], ap * sinpif_pi(tp * fp));
+            }
+            asm volatile ("" :: "r"(buff) : "memory");
+        }
+    }
 };
 
 } // namespace avx
@@ -212,6 +259,23 @@ struct Kernel {
             }
         }
     }
+    static NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+    void calc_fill(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp)
+    {
+        ncalc = ncalc / 8;
+        asm volatile ("" : "+r"(nrep) :: "memory");
+        asm volatile ("" : "+r"(ncalc) :: "memory");
+        auto tp = _mm256_set1_ps(t);
+        auto fp = _mm256_set1_ps(freq);
+        auto ap = _mm256_set1_ps(amp);
+        for (size_t j = 0; j < nrep; j++) {
+            for (size_t i = 0; i < ncalc; i++) {
+                asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+                _mm256_store_ps(&buff[i * 8], ap * sinpif_pi(tp * fp));
+            }
+            asm volatile ("" :: "r"(buff) : "memory");
+        }
+    }
 };
 
 } // namespace avx2
@@ -251,6 +315,23 @@ struct Kernel {
                 auto res = ap * sinpif_pi(tp * fp);
                 asm volatile ("" :: "x"(res) : "memory");
             }
+        }
+    }
+    static NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+    void calc_fill(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp)
+    {
+        ncalc = ncalc / 16;
+        asm volatile ("" : "+r"(nrep) :: "memory");
+        asm volatile ("" : "+r"(ncalc) :: "memory");
+        auto tp = _mm512_set1_ps(t);
+        auto fp = _mm512_set1_ps(freq);
+        auto ap = _mm512_set1_ps(amp);
+        for (size_t j = 0; j < nrep; j++) {
+            for (size_t i = 0; i < ncalc; i++) {
+                asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+                _mm512_store_ps(&buff[i * 16], ap * sinpif_pi(tp * fp));
+            }
+            asm volatile ("" :: "r"(buff) : "memory");
         }
     }
 };

@@ -41,14 +41,25 @@ static void time_run(size_t nrep, size_t ncalc)
 
     // Warm-up
     Timer timer;
+    PerfCounter insts(PerfCounter::CPUInsts);
+    PerfCounter cycles(PerfCounter::CPUCycles);
     Kernel::calc_dry(1, 1, t, freq, amp);
 
+    insts.reset();
+    cycles.reset();
     timer.restart();
+    cycles.start(false);
+    insts.start(false);
     if (!empty_run)
         Kernel::calc_dry(nrep, ncalc, t, freq, amp);
+    insts.stop();
+    cycles.stop();
     auto tdry = (double)timer.elapsed() / (double)ncalc / (double)nrep;
+    auto ninsts = (double)insts.finish(false) / (double)ncalc / (double)nrep;
+    auto ncycles = (double)cycles.finish(false) / (double)ncalc / (double)nrep;
 
-    std::cout << "Dry: " << tdry << " ns / ele" << std::endl;
+    std::cout << "Dry: " << tdry << " ns, " << ninsts << " insts, "
+              << ncycles << " cycle / ele" << std::endl;
 }
 
 static void runtests()

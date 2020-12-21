@@ -13,7 +13,7 @@ set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(DEPS REQUIRED nacs-utils>=9.0)
+pkg_check_modules(DEPS REQUIRED nacs-utils>=10.2)
 
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden -Wconversion
   -fno-math-errno -Wno-sign-conversion -Wno-psabi -D_FILE_OFFSET_BITS=64 ${DEPS_CFLAGS})
