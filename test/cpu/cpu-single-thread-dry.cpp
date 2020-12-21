@@ -29,6 +29,9 @@
 using namespace NaCs;
 using namespace CPUKernel;
 
+// For background subtraction
+static bool empty_run = getenv("TEST_EMPTY");
+
 template<typename Kernel>
 static void time_run(size_t nrep, size_t ncalc)
 {
@@ -41,7 +44,8 @@ static void time_run(size_t nrep, size_t ncalc)
     Kernel::calc_dry(1, 1, t, freq, amp);
 
     timer.restart();
-    Kernel::calc_dry(nrep, ncalc, t, freq, amp);
+    if (!empty_run)
+        Kernel::calc_dry(nrep, ncalc, t, freq, amp);
     auto tdry = (double)timer.elapsed() / (double)ncalc / (double)nrep;
 
     std::cout << "Dry: " << tdry << " ns / ele" << std::endl;
