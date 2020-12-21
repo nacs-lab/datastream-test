@@ -43,7 +43,7 @@ static void time_run(size_t nrep, size_t ncalc)
     Timer timer;
     PerfCounter insts(PerfCounter::CPUInsts);
     PerfCounter cycles(PerfCounter::CPUCycles);
-    Kernel::calc_dry(1, 1, t, freq, amp);
+    Kernel::calc_dry(1, ncalc, t, freq, amp);
 
     insts.reset();
     cycles.reset();
