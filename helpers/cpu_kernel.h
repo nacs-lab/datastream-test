@@ -226,6 +226,8 @@ __m512 sinpif_pi(__m512 d)
 
     __m512 s = d * d;
 
+    // Shift the last bit of `q` to the sign bit
+    // and therefore flip the sign of `d` if `q` is odd
     d = __m512(_mm512_slli_epi32(q, 31) ^ __m512i(d));
 
     auto u = -0.17818783f * s + 0.8098674f;
