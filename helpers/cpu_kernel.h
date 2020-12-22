@@ -20,8 +20,14 @@
 #define HELPERS_CPU_KERNEL_H
 
 #include <nacs-utils/utils.h>
+#include <nacs-utils/processor.h>
 
 namespace CPUKernel {
+
+NACS_EXPORT(ds_helper) extern const NaCs::CPUInfo &host;
+NACS_EXPORT(ds_helper) bool hasavx();
+NACS_EXPORT(ds_helper) bool hasavx2();
+NACS_EXPORT(ds_helper) bool hasavx512();
 
 namespace scalar {
 

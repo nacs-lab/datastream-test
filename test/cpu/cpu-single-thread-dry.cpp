@@ -20,8 +20,6 @@
 #include "helpers/gen_data.h"
 #include "helpers/test.h"
 
-#include <nacs-utils/processor.h>
-#include <nacs-utils/timer.h>
 #include <nacs-utils/mem.h>
 
 #include <iostream>
@@ -38,45 +36,29 @@ static void time_run(size_t nrep, size_t ncalc)
     float amp = Gen::rand_single(0, 1000);
 
     // Warm-up
-    Timer timer;
-    PerfCounter insts(PerfCounter::CPUInsts);
-    PerfCounter cycles(PerfCounter::CPUCycles);
+    Test::Timer timer;
     Kernel::calc_dry(1, ncalc, t, freq, amp);
 
-    insts.reset();
-    cycles.reset();
     timer.restart();
-    cycles.start(false);
-    insts.start(false);
     if (!Test::empty)
         Kernel::calc_dry(nrep, ncalc, t, freq, amp);
-    insts.stop();
-    cycles.stop();
-    auto tdry = (double)timer.elapsed() / (double)ncalc / (double)nrep;
-    auto ninsts = (double)insts.finish(false) / (double)ncalc / (double)nrep;
-    auto ncycles = (double)cycles.finish(false) / (double)ncalc / (double)nrep;
-
-    std::cout << tdry << " ns, " << ninsts << " insts, "
-              << ncycles << " cycle / ele" << std::endl;
+    timer.print(nrep, ncalc);
 }
 
 static void runtests()
 {
-    auto &host NACS_UNUSED = CPUInfo::get_host();
-
 #if NACS_CPU_X86 || NACS_CPU_X86_64
-    if (host.test_feature(X86::Feature::avx512f) &&
-        host.test_feature(X86::Feature::avx512dq)) {
+    if (CPUKernel::hasavx512()) {
         std::cout << "AVX512:" << std::endl;
         time_run<avx512::Kernel>(32 * 1024, 2 * 1024 * 1024);
         return;
     }
-    if (host.test_feature(X86::Feature::avx2) && host.test_feature(X86::Feature::fma)) {
+    if (CPUKernel::hasavx2()) {
         std::cout << "AVX2:" << std::endl;
         time_run<avx2::Kernel>(16 * 1024, 2 * 1024 * 1024);
         return;
     }
-    if (host.test_feature(X86::Feature::avx)) {
+    if (CPUKernel::hasavx()) {
         std::cout << "AVX:" << std::endl;
         time_run<avx::Kernel>(12 * 1024, 2 * 1024 * 1024);
         return;

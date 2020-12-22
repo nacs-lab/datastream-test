@@ -20,11 +20,35 @@
 #define HELPERS_TEST_H
 
 #include <nacs-utils/utils.h>
+#include <nacs-utils/timer.h>
 
 namespace Test {
 
+using namespace NaCs;
+
 // For background check and subtraction
 NACS_EXPORT(ds_helper) extern bool empty;
+
+struct Timer {
+    NaCs::Timer timer;
+    PerfCounter insts{PerfCounter::CPUInsts};
+    PerfCounter cycles{PerfCounter::CPUCycles};
+    PerfCounter cacherefs{PerfCounter::CacheRefs};
+    PerfCounter cachemisses{PerfCounter::CacheMisses};
+    PerfCounter stall_fe{PerfCounter::CPUStallFrontend};
+    PerfCounter stall_be{PerfCounter::CPUStallBackend};
+
+    NACS_EXPORT(ds_helper) Timer();
+    NACS_EXPORT(ds_helper) void enable_cache(bool on=true);
+    NACS_EXPORT(ds_helper) void enable_stall(bool on=true);
+
+    NACS_EXPORT(ds_helper) void restart();
+    NACS_EXPORT(ds_helper) void print(size_t nrep=1, size_t ncalc=1);
+
+private:
+    bool m_cache_on{false};
+    bool m_stall_on{false};
+};
 
 }
 

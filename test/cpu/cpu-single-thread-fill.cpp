@@ -20,8 +20,6 @@
 #include "helpers/gen_data.h"
 #include "helpers/test.h"
 
-#include <nacs-utils/processor.h>
-#include <nacs-utils/timer.h>
 #include <nacs-utils/mem.h>
 
 #include <iostream>
@@ -29,57 +27,6 @@
 
 using namespace NaCs;
 using namespace CPUKernel;
-
-struct RunTimer {
-    Timer timer;
-    PerfCounter insts{PerfCounter::CPUInsts};
-    PerfCounter cycles{PerfCounter::CPUCycles};
-    PerfCounter cacherefs{PerfCounter::CacheRefs};
-    PerfCounter cachemisses{PerfCounter::CacheMisses};
-    // PerfCounter stall_fe{PerfCounter::CPUStallFrontend};
-    // PerfCounter stall_be{PerfCounter::CPUStallBackend};
-
-    void restart()
-    {
-        insts.reset();
-        cycles.reset();
-        cachemisses.reset();
-        cacherefs.reset();
-        // stall_fe.reset();
-        // stall_be.reset();
-
-        timer.restart();
-        // stall_be.start(false);
-        // stall_fe.start(false);
-        cacherefs.start(false);
-        cachemisses.start(false);
-        cycles.start(false);
-        insts.start(false);
-    }
-    void print(size_t nrep, size_t ncalc)
-    {
-        insts.stop();
-        cycles.stop();
-        cachemisses.stop();
-        cacherefs.stop();
-        // stall_fe.stop();
-        // stall_be.stop();
-        auto tdry = (double)timer.elapsed() / (double)ncalc / (double)nrep;
-        auto ninsts = (double)insts.finish(false) / (double)ncalc / (double)nrep;
-        auto ncycles = (double)cycles.finish(false) / (double)ncalc / (double)nrep;
-        auto ncachemisses = (double)cachemisses.finish(false) / (double)ncalc / (double)nrep;
-        auto ncacherefs = (double)cacherefs.finish(false) / (double)ncalc / (double)nrep;
-        // auto nstall_fe = (double)stall_fe.finish(false) / (double)ncalc / (double)nrep;
-        // auto nstall_be = (double)stall_be.finish(false) / (double)ncalc / (double)nrep;
-
-        std::cout << tdry << " ns, " << ninsts << " insts, "
-                  << ncycles << " cycle," << std::endl;
-        std::cout << "  " << ncacherefs << " cache refs, " << ncachemisses << " cache misses,"
-                  << std::endl;
-        // std::cout << "  " << nstall_fe << " frontend stall, " << nstall_be << " backend stall,"
-        //           << std::endl;
-    }
-};
 
 template<typename Kernel>
 static void time_run(size_t nrep, size_t ncalc, float *buff)
@@ -89,7 +36,8 @@ static void time_run(size_t nrep, size_t ncalc, float *buff)
     float amp = Gen::rand_single(0, 1000);
 
     // Warm-up
-    RunTimer timer;
+    Test::Timer timer;
+    timer.enable_cache();
     Kernel::calc_fill(1, ncalc, buff, t, freq, amp);
 
     timer.restart();
@@ -106,7 +54,8 @@ static void time_run_nt(size_t nrep, size_t ncalc, float *buff)
     float amp = Gen::rand_single(0, 1000);
 
     // Warm-up
-    RunTimer timer;
+    Test::Timer timer;
+    timer.enable_cache();
     Kernel::calc_fill_nt(1, ncalc, buff, t, freq, amp);
 
     timer.restart();
@@ -124,8 +73,7 @@ static void runtests()
         [] (float *ptr) { unmapPage((void*)ptr, 16 * 1024 * 1024 * 4); });
 
 #if NACS_CPU_X86 || NACS_CPU_X86_64
-    if (host.test_feature(X86::Feature::avx512f) &&
-        host.test_feature(X86::Feature::avx512dq)) {
+    if (CPUKernel::hasavx512()) {
         std::cout << "AVX512:" << std::endl;
         std::cout << "Normal" << std::endl;
         time_run<avx512::Kernel>(32 * 2 * 1024 * 1024, 1024, buff.get());
@@ -139,7 +87,7 @@ static void runtests()
         time_run_nt<avx512::Kernel>(32 * 128, 16 * 1024 * 1024, buff.get());
         return;
     }
-    if (host.test_feature(X86::Feature::avx2) && host.test_feature(X86::Feature::fma)) {
+    if (CPUKernel::hasavx2()) {
         std::cout << "AVX2:" << std::endl;
         std::cout << "Normal" << std::endl;
         time_run<avx2::Kernel>(16 * 2 * 1024 * 1024, 1024, buff.get());
@@ -153,7 +101,7 @@ static void runtests()
         time_run_nt<avx2::Kernel>(16 * 128, 16 * 1024 * 1024, buff.get());
         return;
     }
-    if (host.test_feature(X86::Feature::avx)) {
+    if (CPUKernel::hasavx()) {
         std::cout << "AVX:" << std::endl;
         std::cout << "Normal" << std::endl;
         time_run<avx::Kernel>(12 * 2 * 1024 * 1024, 1024, buff.get());

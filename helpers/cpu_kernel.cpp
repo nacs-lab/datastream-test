@@ -26,6 +26,29 @@
 
 namespace CPUKernel {
 
+NACS_EXPORT() const NaCs::CPUInfo &host = NaCs::CPUInfo::get_host();
+
+#if NACS_CPU_X86 || NACS_CPU_X86_64
+
+NACS_EXPORT() bool hasavx()
+{
+    return host.test_feature(NaCs::X86::Feature::avx);
+}
+
+NACS_EXPORT() bool hasavx2()
+{
+    return host.test_feature(NaCs::X86::Feature::avx2) &&
+        host.test_feature(NaCs::X86::Feature::fma);
+}
+
+NACS_EXPORT() bool hasavx512()
+{
+    return host.test_feature(NaCs::X86::Feature::avx512f) &&
+        host.test_feature(NaCs::X86::Feature::avx512dq);
+}
+
+#endif
+
 namespace scalar {
 
 // Calculate `sin(pi * d) / pi`
