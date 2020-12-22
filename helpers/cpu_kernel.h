@@ -100,6 +100,18 @@ struct Kernel {
     {
         calc_fill_nt(nrep, ncalc, buff, t, freq, amp);
     }
+    static NACS_NOINLINE __attribute__((flatten))
+    void fill(size_t nrep, size_t ncalc, int *buff, int v)
+    {
+        asm volatile ("" : "+r"(nrep) :: "memory");
+        asm volatile ("" : "+r"(ncalc) :: "memory");
+        for (size_t j = 0; j < nrep; j++) {
+            asm volatile ("" : "+r"(v) :: "memory");
+            for (size_t i = 0; i < ncalc; i++)
+                buff[i] = v;
+            asm volatile ("" :: "r"(buff) : "memory");
+        }
+    }
 };
 
 } // namespace scalar
@@ -162,6 +174,20 @@ struct Kernel {
     void calc_fill_nt(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp)
     {
         calc_fill_nt(nrep, ncalc, buff, t, freq, amp);
+    }
+    static NACS_NOINLINE __attribute__((flatten))
+    void fill(size_t nrep, size_t ncalc, int *buff, int v)
+    {
+        ncalc = ncalc / 4;
+        asm volatile ("" : "+r"(nrep) :: "memory");
+        asm volatile ("" : "+r"(ncalc) :: "memory");
+        auto vp = vdupq_n_s32(v);
+        for (size_t j = 0; j < nrep; j++) {
+            asm volatile ("" : "+w"(vp) :: "memory");
+            for (size_t i = 0; i < ncalc; i++)
+                vst1q_s32(&buff[i * 4], vp);
+            asm volatile ("" :: "r"(buff) : "memory");
+        }
     }
 };
 } // namespace asimd
@@ -237,6 +263,20 @@ struct Kernel {
                 asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
                 _mm_stream_ps(&buff[i * 4], ap * sinpif_pi(tp * fp));
             }
+            asm volatile ("" :: "r"(buff) : "memory");
+        }
+    }
+    static NACS_NOINLINE __attribute__((target("sse2"),flatten))
+    void fill(size_t nrep, size_t ncalc, int *buff, int v)
+    {
+        ncalc = ncalc / 4;
+        asm volatile ("" : "+r"(nrep) :: "memory");
+        asm volatile ("" : "+r"(ncalc) :: "memory");
+        auto vp = _mm_set1_epi32(v);
+        for (size_t j = 0; j < nrep; j++) {
+            asm volatile ("" : "+x"(vp) :: "memory");
+            for (size_t i = 0; i < ncalc; i++)
+                _mm_store_si128((__m128i*)&buff[i * 4], vp);
             asm volatile ("" :: "r"(buff) : "memory");
         }
     }
@@ -320,6 +360,20 @@ struct Kernel {
             asm volatile ("" :: "r"(buff) : "memory");
         }
     }
+    static NACS_NOINLINE __attribute__((target("avx"),flatten))
+    void fill(size_t nrep, size_t ncalc, int *buff, int v)
+    {
+        ncalc = ncalc / 8;
+        asm volatile ("" : "+r"(nrep) :: "memory");
+        asm volatile ("" : "+r"(ncalc) :: "memory");
+        auto vp = _mm256_set1_epi32(v);
+        for (size_t j = 0; j < nrep; j++) {
+            asm volatile ("" : "+x"(vp) :: "memory");
+            for (size_t i = 0; i < ncalc; i++)
+                _mm256_store_si256((__m256i*)&buff[i * 8], vp);
+            asm volatile ("" :: "r"(buff) : "memory");
+        }
+    }
 };
 
 } // namespace avx
@@ -395,6 +449,20 @@ struct Kernel {
             asm volatile ("" :: "r"(buff) : "memory");
         }
     }
+    static NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+    void fill(size_t nrep, size_t ncalc, int *buff, int v)
+    {
+        ncalc = ncalc / 8;
+        asm volatile ("" : "+r"(nrep) :: "memory");
+        asm volatile ("" : "+r"(ncalc) :: "memory");
+        auto vp = _mm256_set1_epi32(v);
+        for (size_t j = 0; j < nrep; j++) {
+            asm volatile ("" : "+x"(vp) :: "memory");
+            for (size_t i = 0; i < ncalc; i++)
+                _mm256_store_si256((__m256i*)&buff[i * 8], vp);
+            asm volatile ("" :: "r"(buff) : "memory");
+        }
+    }
 };
 
 } // namespace avx2
@@ -467,6 +535,20 @@ struct Kernel {
                 asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
                 _mm512_stream_ps(&buff[i * 16], ap * sinpif_pi(tp * fp));
             }
+            asm volatile ("" :: "r"(buff) : "memory");
+        }
+    }
+    static NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+    void fill(size_t nrep, size_t ncalc, int *buff, int v)
+    {
+        ncalc = ncalc / 16;
+        asm volatile ("" : "+r"(nrep) :: "memory");
+        asm volatile ("" : "+r"(ncalc) :: "memory");
+        auto vp = _mm512_set1_epi32(v);
+        for (size_t j = 0; j < nrep; j++) {
+            asm volatile ("" : "+x"(vp) :: "memory");
+            for (size_t i = 0; i < ncalc; i++)
+                _mm512_store_si512((__m512i*)&buff[i * 16], vp);
             asm volatile ("" :: "r"(buff) : "memory");
         }
     }

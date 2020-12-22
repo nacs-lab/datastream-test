@@ -5,3 +5,6 @@ target_link_libraries(cpu-single-thread-dry nacs-utils)
 
 add_executable(cpu-single-thread-fill cpu-single-thread-fill.cpp)
 target_link_libraries(cpu-single-thread-fill nacs-utils)
+
+add_executable(cpu-write-bandwidth cpu-write-bandwidth.cpp)
+target_link_libraries(cpu-write-bandwidth nacs-utils)
