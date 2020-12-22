@@ -2,9 +2,11 @@
 
 set(datastream_helpers_HDRS
   cpu_kernel.h
+  test.h
   )
 set(datastream_helpers_SRCS
   cpu_kernel.cpp
+  test.cpp
   )
 set(datastream_helpers_LINKS ${DEPS_LIBRARIES})
 

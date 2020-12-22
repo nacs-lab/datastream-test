@@ -18,6 +18,7 @@
 
 #include "helpers/cpu_kernel.h"
 #include "helpers/gen_data.h"
+#include "helpers/test.h"
 
 #include <nacs-utils/processor.h>
 #include <nacs-utils/timer.h>
@@ -28,9 +29,6 @@
 
 using namespace NaCs;
 using namespace CPUKernel;
-
-// For background subtraction
-static bool empty_run = getenv("TEST_EMPTY");
 
 template<typename Kernel>
 static void time_run(size_t nrep, size_t ncalc)
@@ -50,7 +48,7 @@ static void time_run(size_t nrep, size_t ncalc)
     timer.restart();
     cycles.start(false);
     insts.start(false);
-    if (!empty_run)
+    if (!Test::empty)
         Kernel::calc_dry(nrep, ncalc, t, freq, amp);
     insts.stop();
     cycles.stop();
