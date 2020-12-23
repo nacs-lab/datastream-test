@@ -66,8 +66,6 @@ static void time_run_nt(size_t nrep, size_t ncalc, float *buff)
 
 static void runtests()
 {
-    auto &host NACS_UNUSED = CPUInfo::get_host();
-
     std::unique_ptr<float,void(*)(float*)> buff(
         (float*)mapAnonPage(16 * 1024 * 1024 * 4, Prot::RW),
         [] (float *ptr) { unmapPage((void*)ptr, 16 * 1024 * 1024 * 4); });
