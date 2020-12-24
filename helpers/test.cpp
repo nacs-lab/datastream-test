@@ -120,7 +120,7 @@ NACS_EXPORT() void Timer::print(size_t nrep, size_t nele)
             std::cout << ", \"stall_fe\": " << nstall_fe
                       << ", \"stall_be\": " << nstall_be;
         }
-        std::cout << "}" << std::endl;
+        std::cout << " }" << std::endl;
     }
     else {
         std::cout << tdry << " ns, " << ninsts << " insts, "
