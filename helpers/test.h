@@ -28,6 +28,7 @@ using namespace NaCs;
 
 // For background check and subtraction
 NACS_EXPORT(ds_helper) extern bool empty;
+NACS_EXPORT(ds_helper) extern bool output_json;
 
 struct Timer {
     NaCs::Timer timer;
@@ -43,7 +44,7 @@ struct Timer {
     NACS_EXPORT(ds_helper) void enable_stall(bool on=true);
 
     NACS_EXPORT(ds_helper) void restart();
-    NACS_EXPORT(ds_helper) void print(size_t nrep=1, size_t ncalc=1);
+    NACS_EXPORT(ds_helper) void print(size_t nrep=1, size_t nele=1);
 
 private:
     bool m_cache_on{false};

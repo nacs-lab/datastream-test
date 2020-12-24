@@ -22,8 +22,23 @@
 
 namespace Test {
 
+static bool check_env(const char *name, bool def=false)
+{
+    auto env = getenv(name);
+    if (!env || !*env)
+        return def;
+    if (strcasecmp(env, "0") == 0 || strcasecmp(env, "off") == 0 ||
+        strcasecmp(env, "false") == 0 || strcasecmp(env, "f") == 0)
+        return false;
+    if (strcasecmp(env, "1") == 0 || strcasecmp(env, "on") == 0 ||
+        strcasecmp(env, "true") == 0 || strcasecmp(env, "t") == 0)
+        return true;
+    return def;
+}
+
 // For background check and subtraction
-NACS_EXPORT() bool empty = getenv("TEST_EMPTY");
+NACS_EXPORT() bool empty = check_env("TEST_EMPTY");
+NACS_EXPORT() bool output_json = check_env("TEST_OUTPUT_JSON");
 
 NACS_EXPORT() Timer::Timer()
 {
@@ -65,7 +80,7 @@ NACS_EXPORT() void Timer::restart()
     insts.start(false);
 }
 
-NACS_EXPORT() void Timer::print(size_t nrep, size_t ncalc)
+NACS_EXPORT() void Timer::print(size_t nrep, size_t nele)
 {
     insts.stop();
     cycles.stop();
@@ -77,31 +92,48 @@ NACS_EXPORT() void Timer::print(size_t nrep, size_t ncalc)
         stall_fe.stop();
         stall_be.stop();
     }
-    auto tdry = (double)timer.elapsed() / (double)ncalc / (double)nrep;
-    auto ninsts = (double)insts.finish(false) / (double)ncalc / (double)nrep;
-    auto ncycles = (double)cycles.finish(false) / (double)ncalc / (double)nrep;
+    auto tdry = (double)timer.elapsed() / (double)nele / (double)nrep;
+    auto ninsts = (double)insts.finish(false) / (double)nele / (double)nrep;
+    auto ncycles = (double)cycles.finish(false) / (double)nele / (double)nrep;
     double ncachemisses = 0;
     double ncacherefs = 0;
     double nstall_fe = 0;
     double nstall_be = 0;
     if (m_cache_on) {
-        ncachemisses = (double)cachemisses.finish(false) / (double)ncalc / (double)nrep;
-        ncacherefs = (double)cacherefs.finish(false) / (double)ncalc / (double)nrep;
+        ncachemisses = (double)cachemisses.finish(false) / (double)nele / (double)nrep;
+        ncacherefs = (double)cacherefs.finish(false) / (double)nele / (double)nrep;
     }
     if (m_stall_on) {
-        nstall_fe = (double)stall_fe.finish(false) / (double)ncalc / (double)nrep;
-        nstall_be = (double)stall_be.finish(false) / (double)ncalc / (double)nrep;
+        nstall_fe = (double)stall_fe.finish(false) / (double)nele / (double)nrep;
+        nstall_be = (double)stall_be.finish(false) / (double)nele / (double)nrep;
     }
 
-    std::cout << tdry << " ns, " << ninsts << " insts, "
-              << ncycles << " cycle," << std::endl;
-    if (m_cache_on) {
-        std::cout << "  " << ncacherefs << " cache refs, " << ncachemisses << " cache misses,"
-                  << std::endl;
+    if (output_json) {
+        std::cout << "{";
+        std::cout << " \"t\": " << tdry << ", \"inst\": " << ninsts
+                  << ", \"cycle\": " << ncycles;
+        if (m_cache_on) {
+            std::cout << ", \"cache_ref\": " << ncacherefs
+                      << ", \"cache_miss\": " << ncachemisses;
+        }
+        if (m_stall_on) {
+            std::cout << ", \"stall_fe\": " << nstall_fe
+                      << ", \"stall_be\": " << nstall_be;
+        }
+        std::cout << "}" << std::endl;
     }
-    if (m_stall_on) {
-        std::cout << "  " << nstall_fe << " frontend stall, " << nstall_be << " backend stall,"
-                  << std::endl;
+    else {
+        std::cout << tdry << " ns, " << ninsts << " insts, "
+                  << ncycles << " cycle," << std::endl;
+        if (m_cache_on) {
+            std::cout << "  " << ncacherefs << " cache refs, " << ncachemisses << " cache misses,"
+                      << std::endl;
+        }
+        if (m_stall_on) {
+            std::cout << "  " << nstall_fe << " frontend stall, "
+                      << nstall_be << " backend stall,"
+                      << std::endl;
+        }
     }
 }
 
