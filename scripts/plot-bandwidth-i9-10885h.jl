@@ -22,6 +22,7 @@ for line in data_normal
     plot(line.size, line.byte_ns, label="$(line.core) cores")
 end
 axvline(L1d, color="C3", linewidth=3)
+text(L1d, 90, "L1d", rotation=90, va="center", ha="right", color="C3", fontsize=19)
 legend(fontsize="x-small", ncol=2, columnspacing=1, handlelength=1)
 xscale("log")
 ylim([53, 114])
@@ -39,6 +40,7 @@ for line in data_normal
     plot(line.size, line.byte_cyl, label="$(line.core) cores")
 end
 axvline(L1d, color="C3", linewidth=3)
+text(L1d, 25, "L1d", rotation=90, va="center", ha="right", color="C3", fontsize=19)
 legend(fontsize="x-small", ncol=2, columnspacing=1, handlelength=1)
 xscale("log")
 ylim([15, 32])
@@ -56,6 +58,7 @@ for line in data_no_prefetch
     plot(line.size, line.byte_ns, label="$(line.core) cores")
 end
 axvline(L1d, color="C3", linewidth=3)
+text(L1d, 90, "L1d", rotation=90, va="center", ha="right", color="C3", fontsize=19)
 legend(fontsize="x-small", ncol=2, columnspacing=1, handlelength=1)
 xscale("log")
 ylim([53, 114])
@@ -73,6 +76,7 @@ for line in data_no_prefetch
     plot(line.size, line.byte_cyl, label="$(line.core) cores")
 end
 axvline(L1d, color="C3", linewidth=3)
+text(L1d, 25, "L1d", rotation=90, va="center", ha="right", color="C3", fontsize=19)
 legend(fontsize="x-small", ncol=2, columnspacing=1, handlelength=1)
 xscale("log")
 ylim([15, 32])
@@ -95,6 +99,7 @@ for line in data_normal
     plot(line.size .* line.core, line.byte_ns .* line.core, label="$(line.core) cores")
 end
 axvline(L3_total, color="C2", linewidth=3)
+text(L3_total, 18, "L3", rotation=90, va="center", ha="right", color="C2", fontsize=19)
 legend(fontsize="x-small", ncol=1, columnspacing=1, handlelength=1)
 xscale("log")
 yscale("log")
@@ -116,6 +121,7 @@ for line in data_normal
     plot(line.size .* line.core, line.byte_cyl .* line.core, label="$(line.core) cores")
 end
 axvline(L3_total, color="C2", linewidth=3)
+text(L3_total, 4.5, "L3", rotation=90, va="center", ha="right", color="C2", fontsize=19)
 legend(fontsize="x-small", ncol=1, columnspacing=1, handlelength=1)
 xscale("log")
 yscale("log")
@@ -137,6 +143,7 @@ for line in data_no_prefetch
     plot(line.size .* line.core, line.byte_ns .* line.core, label="$(line.core) cores")
 end
 axvline(L3_total, color="C2", linewidth=3)
+text(L3_total, 18, "L3", rotation=90, va="center", ha="right", color="C2", fontsize=19)
 legend(fontsize="x-small", ncol=1, columnspacing=1, handlelength=1)
 xscale("log")
 yscale("log")
@@ -158,6 +165,7 @@ for line in data_no_prefetch
     plot(line.size .* line.core, line.byte_cyl .* line.core, label="$(line.core) cores")
 end
 axvline(L3_total, color="C2", linewidth=3)
+text(L3_total, 4.5, "L3", rotation=90, va="center", ha="right", color="C2", fontsize=19)
 legend(fontsize="x-small", ncol=1, columnspacing=1, handlelength=1)
 xscale("log")
 yscale("log")
@@ -184,6 +192,7 @@ for line in data_normal
     plot(line.size .* line.core, line.miss_perc, label="$(line.core) cores")
 end
 axvline(L3_total, color="C2", linewidth=3)
+text(L3_total, 50, "L3", rotation=90, va="center", ha="right", color="C2", fontsize=19)
 legend(fontsize="x-small", ncol=2, columnspacing=1, handlelength=1)
 xscale("log")
 xlim([3 * 1024^2, 1.5 * 1024^3])
@@ -202,6 +211,7 @@ for line in data_no_prefetch
     plot(line.size .* line.core, line.miss_perc, label="$(line.core) cores")
 end
 axvline(L3_total, color="C2", linewidth=3)
+text(L3_total, 50, "L3", rotation=90, va="center", ha="right", color="C2", fontsize=19)
 legend(fontsize="x-small", ncol=2, columnspacing=1, handlelength=1)
 xscale("log")
 xlim([3 * 1024^2, 1.5 * 1024^3])
@@ -224,7 +234,9 @@ for line in data_nt
     plot(line.size, line.byte_ns .* line.core, label="$(line.core) cores")
 end
 axvline(L1d, color="C3", linewidth=3)
+text(L1d, 33.5, "L1d", rotation=90, va="center", ha="right", color="C3", fontsize=19)
 axvline(L2, color="C1", linewidth=3)
+text(L2, 33.5, "L2", rotation=90, va="center", ha="right", color="C1", fontsize=19)
 legend(fontsize="x-small", ncol=3, columnspacing=1, handlelength=1)
 xscale("log")
 grid()
@@ -240,7 +252,9 @@ for line in data_nt
     plot(line.size, line.byte_cyl .* line.core, label="$(line.core) cores")
 end
 axvline(L1d, color="C3", linewidth=3)
+text(L1d, 9.3, "L1d", rotation=90, va="center", ha="right", color="C3", fontsize=19)
 axvline(L2, color="C1", linewidth=3)
+text(L2, 9.3, "L2", rotation=90, va="center", ha="right", color="C1", fontsize=19)
 legend(fontsize="x-small", ncol=3, columnspacing=1, handlelength=1)
 xscale("log")
 grid()
