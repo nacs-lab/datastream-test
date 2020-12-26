@@ -40,6 +40,7 @@ struct Kernel {
     void calc_fill_nt(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static void fill(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void fill_nt(size_t nrep, size_t ncalc, int *buff, int v);
+    NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
 };
 
 } // namespace scalar
@@ -57,6 +58,7 @@ struct Kernel {
     void calc_fill_nt(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static void fill(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void fill_nt(size_t nrep, size_t ncalc, int *buff, int v);
+    NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
 };
 
 } // namespace asimd
@@ -75,6 +77,7 @@ struct Kernel {
     void calc_fill_nt(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static void fill(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void fill_nt(size_t nrep, size_t ncalc, int *buff, int v);
+    NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
 };
 
 } // namespace sse2
@@ -90,6 +93,7 @@ struct Kernel {
     void calc_fill_nt(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static void fill(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void fill_nt(size_t nrep, size_t ncalc, int *buff, int v);
+    NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
 };
 
 } // namespace avx
@@ -105,6 +109,7 @@ struct Kernel {
     void calc_fill_nt(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static void fill(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void fill_nt(size_t nrep, size_t ncalc, int *buff, int v);
+    NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
 };
 
 } // namespace avx2
@@ -120,6 +125,7 @@ struct Kernel {
     void calc_fill_nt(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static void fill(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void fill_nt(size_t nrep, size_t ncalc, int *buff, int v);
+    NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
 };
 
 } // namespace avx512
