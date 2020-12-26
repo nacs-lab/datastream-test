@@ -117,7 +117,7 @@ void Kernel::calc_fill(size_t nrep, size_t ncalc, float *buff, float t, float fr
 NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
 void Kernel::calc_fill_nt(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp)
 {
-    calc_fill_nt(nrep, ncalc, buff, t, freq, amp);
+    calc_fill(nrep, ncalc, buff, t, freq, amp);
 }
 NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
 void Kernel::fill(size_t nrep, size_t ncalc, int *buff, int v)
@@ -134,7 +134,7 @@ void Kernel::fill(size_t nrep, size_t ncalc, int *buff, int v)
 NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
 void Kernel::fill_nt(size_t nrep, size_t ncalc, int *buff, int v)
 {
-    fill_nt(nrep, ncalc, buff, v);
+    fill(nrep, ncalc, buff, v);
 }
 NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
 void Kernel::copy(size_t nele, const int *in, int *out)
@@ -204,7 +204,7 @@ void Kernel::calc_fill(size_t nrep, size_t ncalc, float *buff, float t, float fr
 NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
 void Kernel::calc_fill_nt(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp)
 {
-    calc_fill_nt(nrep, ncalc, buff, t, freq, amp);
+    calc_fill(nrep, ncalc, buff, t, freq, amp);
 }
 NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
 void Kernel::fill(size_t nrep, size_t ncalc, int *buff, int v)
@@ -224,7 +224,7 @@ NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
 void Kernel::fill_nt(size_t nrep, size_t ncalc, int *buff, int v)
 {
     // TODO I think this can use `stnp`
-    fill_nt(nrep, ncalc, buff, v);
+    fill(nrep, ncalc, buff, v);
 }
 NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
 void Kernel::copy(size_t nele, const int *in, int *out)
