@@ -95,7 +95,7 @@ figure(figsize=[12.6, 11.2])
 
 ax = subplot(2, 2, 1)
 for line in data_normal
-    line = filter_data(x->x.size >= L2, line)
+    line = filter_data(x->x.size > L2, line)
     plot(line.size .* line.core, line.byte_ns .* line.core, label="$(line.core) cores")
 end
 axvline(L3_total, color="C2", linewidth=3)
@@ -117,7 +117,7 @@ ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
 
 ax = subplot(2, 2, 2)
 for line in data_normal
-    line = filter_data(x->x.size >= L2, line)
+    line = filter_data(x->x.size > L2, line)
     plot(line.size .* line.core, line.byte_cyl .* line.core, label="$(line.core) cores")
 end
 axvline(L3_total, color="C2", linewidth=3)
@@ -139,7 +139,7 @@ ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
 
 ax = subplot(2, 2, 3)
 for line in data_no_prefetch
-    line = filter_data(x->x.size >= L2, line)
+    line = filter_data(x->x.size > L2, line)
     plot(line.size .* line.core, line.byte_ns .* line.core, label="$(line.core) cores")
 end
 axvline(L3_total, color="C2", linewidth=3)
@@ -161,7 +161,7 @@ ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
 
 ax = subplot(2, 2, 4)
 for line in data_no_prefetch
-    line = filter_data(x->x.size >= L2, line)
+    line = filter_data(x->x.size > L2, line)
     plot(line.size .* line.core, line.byte_cyl .* line.core, label="$(line.core) cores")
 end
 axvline(L3_total, color="C2", linewidth=3)
