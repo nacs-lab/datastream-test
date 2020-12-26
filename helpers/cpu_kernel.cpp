@@ -145,6 +145,26 @@ void Kernel::copy(size_t nele, const int *in, int *out)
     asm volatile ("" :: "r"(out) : "memory");
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::fill1(size_t nele, int *buff, int v)
+{
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(v) :: "memory");
+    for (size_t i = 0; i < nele; i++)
+        buff[i] = v;
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::read1(size_t nele, const int *buff)
+{
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto v = buff[i];
+        asm volatile ("" :: "r"(v) : "memory");
+    }
+}
+
 } // namespace scalar
 
 #if NACS_CPU_AARCH64
@@ -234,6 +254,28 @@ void Kernel::copy(size_t nele, const int *in, int *out)
     for (size_t i = 0; i < nele; i++)
         vst1q_s32(&out[i * 4], vld1q_s32(&in[i * 4]));
     asm volatile ("" :: "r"(out) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::fill1(size_t nele, int *buff, int v)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    auto vp = vdupq_n_s32(v);
+    for (size_t i = 0; i < nele; i++)
+        vst1q_s32(&buff[i * 4], vp);
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::read1(size_t nele, const int *buff)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto v = vld1q_s32(&buff[i * 4]);
+        asm volatile ("" : "+w"(v) :: "memory");
+    }
 }
 
 } // namespace asimd
@@ -347,6 +389,28 @@ void Kernel::copy(size_t nele, const int *in, int *out)
     for (size_t i = 0; i < nele; i++)
         _mm_store_si128((__m128i*)&out[i * 4], _mm_load_si128((const __m128i*)&in[i * 4]));
     asm volatile ("" :: "r"(out) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::fill1(size_t nele, int *buff, int v)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    auto vp = _mm_set1_epi32(v);
+    for (size_t i = 0; i < nele; i++)
+        _mm_store_si128((__m128i*)&buff[i * 4], vp);
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::read1(size_t nele, const int *buff)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto v = _mm_load_si128((const __m128i*)&buff[i * 4]);
+        asm volatile ("" : "+x"(v) :: "memory");
+    }
 }
 
 } // namespace sse2
@@ -465,6 +529,28 @@ void Kernel::copy(size_t nele, const int *in, int *out)
     asm volatile ("" :: "r"(out) : "memory");
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::fill1(size_t nele, int *buff, int v)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    auto vp = _mm256_set1_epi32(v);
+    for (size_t i = 0; i < nele; i++)
+        _mm256_store_si256((__m256i*)&buff[i * 8], vp);
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::read1(size_t nele, const int *buff)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto v = _mm256_load_si256((const __m256i*)&buff[i * 8]);
+        asm volatile ("" : "+x"(v) :: "memory");
+    }
+}
+
 } // namespace avx
 
 namespace avx2 {
@@ -576,6 +662,28 @@ void Kernel::copy(size_t nele, const int *in, int *out)
     asm volatile ("" :: "r"(out) : "memory");
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::fill1(size_t nele, int *buff, int v)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    auto vp = _mm256_set1_epi32(v);
+    for (size_t i = 0; i < nele; i++)
+        _mm256_store_si256((__m256i*)&buff[i * 8], vp);
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::read1(size_t nele, const int *buff)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto v = _mm256_load_si256((const __m256i*)&buff[i * 8]);
+        asm volatile ("" : "+x"(v) :: "memory");
+    }
+}
+
 } // namespace avx2
 
 namespace avx512 {
@@ -685,6 +793,28 @@ void Kernel::copy(size_t nele, const int *in, int *out)
         _mm512_store_si512((__m512i*)&out[i * 16],
                            _mm512_load_si512((const __m512i*)&in[i * 16]));
     asm volatile ("" :: "r"(out) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::fill1(size_t nele, int *buff, int v)
+{
+    nele = nele / 16;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    auto vp = _mm512_set1_epi32(v);
+    for (size_t i = 0; i < nele; i++)
+        _mm512_store_si512((__m512i*)&buff[i * 16], vp);
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::read1(size_t nele, const int *buff)
+{
+    nele = nele / 16;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto v = _mm512_load_si512((const __m512i*)&buff[i * 16]);
+        asm volatile ("" : "+x"(v) :: "memory");
+    }
 }
 
 } // namespace avx512
