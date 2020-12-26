@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include "test.h"
+#include "print.h"
 
 #include <iostream>
 
@@ -80,7 +81,7 @@ NACS_EXPORT() void Timer::restart()
     insts.start(false);
 }
 
-NACS_EXPORT() void Timer::print(size_t nrep, size_t nele)
+NACS_EXPORT() std::map<std::string,double> Timer::get_res(size_t nrep, size_t nele)
 {
     insts.stop();
     cycles.stop();
@@ -92,46 +93,39 @@ NACS_EXPORT() void Timer::print(size_t nrep, size_t nele)
         stall_fe.stop();
         stall_be.stop();
     }
-    auto tdry = (double)timer.elapsed() / (double)nele / (double)nrep;
-    auto ninsts = (double)insts.finish(false) / (double)nele / (double)nrep;
-    auto ncycles = (double)cycles.finish(false) / (double)nele / (double)nrep;
-    double ncachemisses = 0;
-    double ncacherefs = 0;
-    double nstall_fe = 0;
-    double nstall_be = 0;
+    std::map<std::string,double> res;
+    res["t"] = (double)timer.elapsed() / (double)nele / (double)nrep;
+    res["inst"] = (double)insts.finish(false) / (double)nele / (double)nrep;
+    res["cycle"] = (double)cycles.finish(false) / (double)nele / (double)nrep;
     if (m_cache_on) {
-        ncachemisses = (double)cachemisses.finish(false) / (double)nele / (double)nrep;
-        ncacherefs = (double)cacherefs.finish(false) / (double)nele / (double)nrep;
+        res["cache_miss"] = (double)cachemisses.finish(false) / (double)nele / (double)nrep;
+        res["cache_ref"] = (double)cacherefs.finish(false) / (double)nele / (double)nrep;
     }
     if (m_stall_on) {
-        nstall_fe = (double)stall_fe.finish(false) / (double)nele / (double)nrep;
-        nstall_be = (double)stall_be.finish(false) / (double)nele / (double)nrep;
+        res["stall_fe"] = (double)stall_fe.finish(false) / (double)nele / (double)nrep;
+        res["stall_be"] = (double)stall_be.finish(false) / (double)nele / (double)nrep;
     }
+    return res;
+}
+
+NACS_EXPORT() void Timer::print(size_t nrep, size_t nele)
+{
+    auto res = get_res(nrep, nele);
 
     if (output_json) {
-        std::cout << "{";
-        std::cout << " \"t\": " << tdry << ", \"inst\": " << ninsts
-                  << ", \"cycle\": " << ncycles;
-        if (m_cache_on) {
-            std::cout << ", \"cache_ref\": " << ncacherefs
-                      << ", \"cache_miss\": " << ncachemisses;
-        }
-        if (m_stall_on) {
-            std::cout << ", \"stall_fe\": " << nstall_fe
-                      << ", \"stall_be\": " << nstall_be;
-        }
-        std::cout << " }" << std::endl;
+        Print::json(std::cout, res);
     }
     else {
-        std::cout << tdry << " ns, " << ninsts << " insts, "
-                  << ncycles << " cycle," << std::endl;
+        std::cout << res["t"] << " ns, " << res["inst"] << " insts, "
+                  << res["cycle"] << " cycle," << std::endl;
         if (m_cache_on) {
-            std::cout << "  " << ncacherefs << " cache refs, " << ncachemisses << " cache misses,"
+            std::cout << "  " << res["cache_ref"] << " cache refs, "
+                      << res["cache_miss"] << " cache misses,"
                       << std::endl;
         }
         if (m_stall_on) {
-            std::cout << "  " << nstall_fe << " frontend stall, "
-                      << nstall_be << " backend stall,"
+            std::cout << "  " << res["stall_fe"] << " frontend stall, "
+                      << res["stall_be"] << " backend stall,"
                       << std::endl;
         }
     }

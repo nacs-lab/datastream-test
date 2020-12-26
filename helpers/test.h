@@ -22,6 +22,9 @@
 #include <nacs-utils/utils.h>
 #include <nacs-utils/timer.h>
 
+#include <map>
+#include <string>
+
 namespace Test {
 
 using namespace NaCs;
@@ -44,6 +47,7 @@ struct Timer {
     NACS_EXPORT(ds_helper) void enable_stall(bool on=true);
 
     NACS_EXPORT(ds_helper) void restart();
+    NACS_EXPORT(ds_helper) std::map<std::string,double> get_res(size_t nrep, size_t nele);
     NACS_EXPORT(ds_helper) void print(size_t nrep=1, size_t nele=1);
 
 private:
