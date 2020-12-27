@@ -220,6 +220,8 @@ static void read_block(BlockRing<int> &ring, size_t nrep, size_t nele,
 template<typename Kernel>
 static void test_block(size_t nrep, size_t nele)
 {
+    if (nrep < 128)
+        nrep = 128;
     Thread::pin(0);
     int v = (int)Gen::rand_single(10, 1000000);
     auto buff = (int*)mapAnonPage(alignTo(nele * 4, page_size), Prot::RW);
@@ -346,6 +348,8 @@ static void read_pipe(DataPipe<int> &pipe, size_t nrep, size_t nele,
 template<typename Kernel>
 static void test_pipe(size_t nrep, size_t nele)
 {
+    if (nrep < 128)
+        nrep = 128;
     Thread::pin(0);
     int v = (int)Gen::rand_single(10, 1000000);
     auto buff = (int*)mapAnonPage(alignTo(nele * 4, page_size), Prot::RW);
