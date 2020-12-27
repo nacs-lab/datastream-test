@@ -243,7 +243,8 @@ static void write_block(BlockRing<int> &ring, size_t nrep, size_t nele, int v,
             wrdata = ring.next_write();
         }
 
-        Kernel::fill1(blksz, wrdata.get(), v);
+        if (!Test::empty)
+            Kernel::fill1(blksz, wrdata.get(), v);
         wrdata.done();
         backoff.wake();
 
@@ -267,7 +268,8 @@ static void read_block(BlockRing<int> &ring, size_t nrep, size_t nele,
             rddata = ring.next_read();
         }
 
-        Kernel::read1(blksz, rddata.get());
+        if (!Test::empty)
+            Kernel::read1(blksz, rddata.get());
         rddata.done();
         backoff.wake();
 
@@ -360,7 +362,8 @@ static void write_pipe(DataPipe<int> &pipe, size_t nrep, size_t nele, int v,
             nsync++;
             backoff.pause();
         }
-        Kernel::fill1(sz, ptr, v);
+        if (!Test::empty)
+            Kernel::fill1(sz, ptr, v);
         if (nsync) {
             counter.stall++;
             counter.sync += nsync;
@@ -399,7 +402,8 @@ static void read_pipe(DataPipe<int> &pipe, size_t nrep, size_t nele,
             nsync++;
             backoff.pause();
         }
-        Kernel::read1(sz, ptr);
+        if (!Test::empty)
+            Kernel::read1(sz, ptr);
         if (nsync) {
             counter.stall++;
             counter.sync += nsync;

@@ -26,7 +26,7 @@ endif()
 include_directories(${DEPS_INCLUDE_DIRS})
 
 set(LINKER_FLAGS "-Wl,--as-needed -Wl,--no-undefined -Wl,--gc-sections -pthread -fno-math-errno")
-set(LINKER_FLAGS "${LINKER_FLAGS} -Wl,-Bsymbolic  ${DEPS_LDFLAGS_OTHER}")
+set(LINKER_FLAGS "${LINKER_FLAGS} -Wl,-Bsymbolic-function ${DEPS_LDFLAGS_OTHER}")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++14 -ggdb3 -ffp-contract=fast")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LINKER_FLAGS}")
