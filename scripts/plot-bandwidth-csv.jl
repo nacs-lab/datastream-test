@@ -4,6 +4,8 @@ using NaCsPlot
 using PyPlot
 using DelimitedFiles
 
+include("utils.jl")
+
 function filter_data_core(data, core)
     sizes = Int[]
     byte_ns = Float64[]
@@ -49,35 +51,4 @@ function load_data(name)
     data = readdlm(name, ',', skipstart=1)
     cores = sort!(Int.(unique(data[:, 1])))
     return [filter_data_core(data, core) for core in cores]
-end
-
-function size_to_str(size)
-    size = Int(size)
-    str(num) = isinteger(num) ? string(Int(num)) : string(num)
-    if size < 1024
-        return str(size)
-    else
-        size /= 1024
-    end
-    if size < 1024
-        return "$(str(size)) k"
-    else
-        size /= 1024
-    end
-    if size < 1024
-        return "$(str(size)) M"
-    else
-        size /= 1024
-    end
-    if size < 1024
-        return "$(str(size)) G"
-    else
-        size /= 1024
-    end
-    if size < 1024
-        return "$(str(size)) T"
-    else
-        size /= 1024
-    end
-    return "$(str(size)) P"
 end
