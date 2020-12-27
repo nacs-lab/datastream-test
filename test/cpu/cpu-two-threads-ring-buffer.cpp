@@ -51,7 +51,7 @@ struct Backoff {
         count = start_count;
     }
 private:
-    static constexpr uint32_t start_count = 16;
+    static constexpr uint32_t start_count = 8;
     uint32_t count = start_count;
 };
 #else
@@ -285,7 +285,7 @@ static void test_block(size_t nrep, size_t nele)
     Thread::pin(0);
     int v = (int)Gen::rand_single(10, 1000000);
     auto buff = (int*)mapAnonPage(alignTo(nele * 4, page_size), Prot::RW);
-    BlockRing<int> ring(buff, nele, nele / 512);
+    BlockRing<int> ring(buff, nele, nele / 8);
     std::map<std::string,double> read_perf;
     std::atomic<bool> done{false};
     BlockCounters rd_counter;
