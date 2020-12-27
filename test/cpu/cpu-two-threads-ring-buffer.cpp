@@ -157,8 +157,74 @@ private:
 
 struct BlockCounters {
     uint64_t rw{0};
-    uint64_t sync{0};
+    uint64_t _syncs{0};
     uint64_t stall{0};
+    // std::vector<uint32_t> syncs;
+    // std::vector<uint64_t> sync_ts;
+    void record(uint32_t nsync)
+    {
+        // sync_ts.push_back(__builtin_ia32_rdtsc());
+        // size_t syncs_sz = syncs.size();
+        // if ((syncs_sz & 1) == 0) {
+        //     // last element is not zero count
+        //     syncs.push_back(0);
+        //     syncs_sz += 1;
+        // }
+        // if (nsync) {
+        //     stall++;
+        //     syncs.push_back(nsync);
+        // }
+        // else {
+        //     syncs[syncs_sz - 1]++;
+        // }
+        if (nsync) {
+            stall++;
+            _syncs += nsync;
+        }
+        rw++;
+    }
+    uint64_t sync() const
+    {
+        // uint64_t res = 0;
+        // for (size_t i = 1; i < syncs.size(); i += 2)
+        //     res += syncs[i];
+        // return res;
+        return _syncs;
+    }
+    // void print_syncs(uint64_t offset=0)
+    // {
+    //     {
+    //         bool first = true;
+    //         for (size_t i = 1; i < syncs.size(); i++) {
+    //             if ((i & 1) == 0 && syncs[i] == 0)
+    //                 continue;
+    //             if (first) {
+    //                 first = false;
+    //             }
+    //             else {
+    //                 std::cout << " - ";
+    //             }
+    //             std::cout << syncs[i];
+    //             if ((i & 1) == 0) {
+    //                 std::cout << "x0";
+    //             }
+    //         }
+    //         std::cout << std::endl;
+    //     }
+    //     {
+    //         bool first = true;
+    //         for (auto t: sync_ts) {
+    //             if (first) {
+    //                 first = false;
+    //             }
+    //             else {
+    //                 std::cout << ", ";
+    //             }
+    //             std::cout << t - offset;
+    //         }
+    //         std::cout << std::endl;
+    //     }
+    // }
 };
 
 template<typename Kernel>
@@ -181,11 +247,7 @@ static void write_block(BlockRing<int> &ring, size_t nrep, size_t nele, int v,
         wrdata.done();
         backoff.wake();
 
-        if (nsync) {
-            counter.stall++;
-            counter.sync += nsync;
-        }
-        counter.rw++;
+        counter.record(nsync);
     }
 }
 
@@ -209,11 +271,7 @@ static void read_block(BlockRing<int> &ring, size_t nrep, size_t nele,
         rddata.done();
         backoff.wake();
 
-        if (nsync) {
-            counter.stall++;
-            counter.sync += nsync;
-        }
-        counter.rw++;
+        counter.record(nsync);
     }
 }
 
@@ -228,16 +286,21 @@ static void test_block(size_t nrep, size_t nele)
     BlockRing<int> ring(buff, nele, nele / 512);
     std::map<std::string,double> read_perf;
     std::atomic<bool> done{false};
-    Thread::start(std::vector<int>{1}, [=, &ring, &read_perf, &done] (int) {
+    BlockCounters rd_counter;
+    BlockCounters wr_counter;
+    // rd_counter.syncs.reserve(nrep * nele / ring.blksz());
+    // wr_counter.syncs.reserve(nrep * nele / ring.blksz());
+    // rd_counter.sync_ts.reserve(nrep * nele / ring.blksz());
+    // wr_counter.sync_ts.reserve(nrep * nele / ring.blksz());
+    Thread::start(std::vector<int>{1}, [=, &ring, &read_perf, &done, &rd_counter] (int) {
         Test::Timer timer;
         timer.enable_cache();
         timer.restart();
-        BlockCounters counter;
-        read_block<Kernel>(ring, nrep, nele, counter);
+        read_block<Kernel>(ring, nrep, nele, rd_counter);
         read_perf = timer.get_res(nrep, nele);
-        read_perf["ring_rw"] = (double)counter.rw / (double)nrep / (double)nele;
-        read_perf["ring_sync"] = (double)counter.sync / (double)nrep / (double)nele;
-        read_perf["ring_stall"] = (double)counter.stall / (double)nrep / (double)nele;
+        read_perf["ring_rw"] = (double)rd_counter.rw / (double)nrep / (double)nele;
+        read_perf["ring_sync"] = (double)rd_counter.sync() / (double)nrep / (double)nele;
+        read_perf["ring_stall"] = (double)rd_counter.stall / (double)nrep / (double)nele;
         done.store(true, std::memory_order_release);
         CPU::wake();
     });
@@ -245,14 +308,17 @@ static void test_block(size_t nrep, size_t nele)
     Test::Timer timer;
     timer.enable_cache();
     timer.restart();
-    BlockCounters counter;
-    write_block<Kernel>(ring, nrep, nele, v, counter);
+    write_block<Kernel>(ring, nrep, nele, v, wr_counter);
     auto write_perf = timer.get_res(nrep, nele);
-    write_perf["ring_rw"] = (double)counter.rw / (double)nrep / (double)nele;
-    write_perf["ring_sync"] = (double)counter.sync / (double)nrep / (double)nele;
-    write_perf["ring_stall"] = (double)counter.stall / (double)nrep / (double)nele;
+    write_perf["ring_rw"] = (double)wr_counter.rw / (double)nrep / (double)nele;
+    write_perf["ring_sync"] = (double)wr_counter.sync() / (double)nrep / (double)nele;
+    write_perf["ring_stall"] = (double)wr_counter.stall / (double)nrep / (double)nele;
     while (!done.load(std::memory_order_acquire))
         CPU::pause();
+
+    // uint64_t toffset = min(rd_counter.sync_ts[0], wr_counter.sync_ts[0]);
+    // rd_counter.print_syncs(toffset);
+    // wr_counter.print_syncs(toffset);
 
     std::map<std::string,decltype(read_perf)> total_perf{
         std::make_pair("read", read_perf),
