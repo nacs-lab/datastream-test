@@ -228,7 +228,7 @@ static void test_block(size_t nrep, size_t nele)
     BlockRing<int> ring(buff, nele, nele / 512);
     std::map<std::string,double> read_perf;
     std::atomic<bool> done{false};
-    Thread::start({1}, [=, &ring, &read_perf, &done] (int) {
+    Thread::start(std::vector<int>{1}, [=, &ring, &read_perf, &done] (int) {
         Test::Timer timer;
         timer.enable_cache();
         timer.restart();
@@ -356,7 +356,7 @@ static void test_pipe(size_t nrep, size_t nele)
     DataPipe<int> pipe(buff, nele);
     std::map<std::string,double> read_perf;
     std::atomic<bool> done{false};
-    Thread::start({1}, [=, &pipe, &read_perf, &done] (int) {
+    Thread::start(std::vector<int>{1}, [=, &pipe, &read_perf, &done] (int) {
         Test::Timer timer;
         timer.enable_cache();
         timer.restart();
@@ -395,38 +395,38 @@ static void runtests(long size)
 #if NACS_CPU_X86 || NACS_CPU_X86_64
     if (CPUKernel::hasavx512()) {
         std::cout << "AVX512:" << std::endl;
-        test_pipe<avx512::Kernel>(size_t(32 * 16ull * 1024 * 1024 * 4 / size), size / 4);
-        test_block<avx512::Kernel>(size_t(32 * 16ull * 1024 * 1024 * 4 / size), size / 4);
+        test_pipe<avx512::Kernel>(size_t(32 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
+        test_block<avx512::Kernel>(size_t(32 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
         return;
     }
     if (CPUKernel::hasavx2()) {
         std::cout << "AVX2:" << std::endl;
-        test_pipe<avx2::Kernel>(size_t(16 * 16ull * 1024 * 1024 * 4 / size), size / 4);
-        test_block<avx2::Kernel>(size_t(16 * 16ull * 1024 * 1024 * 4 / size), size / 4);
+        test_pipe<avx2::Kernel>(size_t(16 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
+        test_block<avx2::Kernel>(size_t(16 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
         return;
     }
     if (CPUKernel::hasavx()) {
         std::cout << "AVX:" << std::endl;
-        test_pipe<avx::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 4 / size), size / 4);
-        test_block<avx::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 4 / size), size / 4);
+        test_pipe<avx::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
+        test_block<avx::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
         return;
     }
     std::cout << "SSE2:" << std::endl;
-    test_pipe<sse2::Kernel>(size_t(6 * 16ull * 1024 * 1024 * 4 / size), size / 4);
-    test_block<sse2::Kernel>(size_t(6 * 16ull * 1024 * 1024 * 4 / size), size / 4);
+    test_pipe<sse2::Kernel>(size_t(6 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
+    test_block<sse2::Kernel>(size_t(6 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
     return;
 #endif
 
 #if NACS_CPU_AARCH64
     std::cout << "ASIMD:" << std::endl;
-    test_pipe<asimd::Kernel>(size_t(6 * 16ull * 1024 * 1024 * 4 / size), size / 4);
-    test_block<asimd::Kernel>(size_t(6 * 16ull * 1024 * 1024 * 4 / size), size / 4);
+    test_pipe<asimd::Kernel>(size_t(6 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
+    test_block<asimd::Kernel>(size_t(6 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
     return;
 #endif
 
     std::cout << "Scalar:" << std::endl;
-    test_pipe<scalar::Kernel>(size_t(16ull * 1024 * 1024 * 4 / size), size / 4);
-    test_block<scalar::Kernel>(size_t(16ull * 1024 * 1024 * 4 / size), size / 4);
+    test_pipe<scalar::Kernel>(size_t(16ull * 1024 * 1024 * 1024 / size), size / 4);
+    test_block<scalar::Kernel>(size_t(16ull * 1024 * 1024 * 1024 / size), size / 4);
 }
 
 static inline long parse_int(const char *s)
