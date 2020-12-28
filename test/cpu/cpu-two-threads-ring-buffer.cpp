@@ -35,6 +35,8 @@
 using namespace NaCs;
 using namespace CPUKernel;
 
+static int worker_cpu;
+
 #if NACS_CPU_X86 || NACS_CPU_X86_64
 struct Backoff {
     NACS_INLINE void wake()
@@ -282,7 +284,6 @@ static void test_block(size_t nrep, size_t nele, size_t block_size)
 {
     if (nrep < 128)
         nrep = 128;
-    Thread::pin(0);
     int v = (int)Gen::rand_single(10, 1000000);
     auto buff = (int*)mapAnonPage(alignTo(nele * 4, page_size), Prot::RW);
     BlockRing<int> ring(buff, nele, block_size);
@@ -294,7 +295,8 @@ static void test_block(size_t nrep, size_t nele, size_t block_size)
     // wr_counter.syncs.reserve(nrep * nele / ring.blksz());
     // rd_counter.sync_ts.reserve(nrep * nele / ring.blksz());
     // wr_counter.sync_ts.reserve(nrep * nele / ring.blksz());
-    Thread::start(std::vector<int>{1}, [=, &ring, &read_perf, &done, &rd_counter] (int) {
+    Thread::start(std::vector<int>{worker_cpu}, [=, &ring, &read_perf, &done,
+                                                 &rd_counter] (int) {
         Test::Timer timer;
         timer.enable_cache();
         timer.restart();
@@ -414,13 +416,12 @@ static void test_pipe(size_t nrep, size_t nele, size_t block_size)
 {
     if (nrep < 128)
         nrep = 128;
-    Thread::pin(0);
     int v = (int)Gen::rand_single(10, 1000000);
     auto buff = (int*)mapAnonPage(alignTo(nele * 4, page_size), Prot::RW);
     DataPipe<int> pipe(buff, nele, block_size);
     std::map<std::string,double> read_perf;
     std::atomic<bool> done{false};
-    Thread::start(std::vector<int>{1}, [=, &pipe, &read_perf, &done] (int) {
+    Thread::start(std::vector<int>{worker_cpu}, [=, &pipe, &read_perf, &done] (int) {
         Test::Timer timer;
         timer.enable_cache();
         timer.restart();
@@ -523,9 +524,20 @@ static inline long parse_int(const char *s)
 
 int main(int argc, char **argv)
 {
-    if (argc < 3) {
-        fprintf(stderr, "Needs at least one argument\n");
+    if (argc < 4) {
+        fprintf(stderr, "Needs at least three arguments\n");
         exit(1);
+    }
+    int cpu0 = (int)parse_int(argv[3]);
+    Thread::pin(cpu0);
+    if (argc >= 4) {
+        worker_cpu = (int)parse_int(argv[4]);
+    }
+    else if (cpu0 == 1) {
+        worker_cpu = 0;
+    }
+    else {
+        worker_cpu = 1;
     }
     runtests((size_t)parse_int(argv[1]), (size_t)parse_int(argv[2]));
     return 0;
