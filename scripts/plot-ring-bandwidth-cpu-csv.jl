@@ -3,6 +3,10 @@
 using NaCsPlot
 using PyPlot
 using DelimitedFiles
+using PyCall
+using Printf
+
+@pyimport copy as pycopy
 
 include("utils.jl")
 
@@ -67,4 +71,42 @@ function filter_data(cb, data)
     return (cpu_wr=cpu_wr, cpu_rd=cpu_rd, byte_ns=byte_ns, byte_cyl=byte_cyl,
             byte_ref=byte_ref, miss_perc=miss_perc,
             pipe_rw=pipe_rw, pipe_stall_perc=pipe_stall_perc, pipe_sync=pipe_sync)
+end
+
+function get_cpu2cpu(data, ncores)
+    @assert data.read.cpu_wr == data.write.cpu_wr
+    @assert data.read.cpu_rd == data.write.cpu_rd
+    res = fill(NaN, ncores, ncores)
+    for i in 1:length(data.read.cpu_wr)
+        cpu_wr = data.read.cpu_wr[i] + 1
+        cpu_rd = data.read.cpu_rd[i] + 1
+        @assert isnan(res[cpu_wr, cpu_rd])
+        res[cpu_wr, cpu_rd] = (1024 / data.read.byte_ns[i] + 1024 / data.write.byte_ns[i]) / 2
+    end
+    return res
+end
+
+function plot_cpu2cpu(data)
+    cmap = pycopy.copy(matplotlib.cm.get_cmap("viridis"))
+    cmap.set_bad(color="lightgray")
+    imshow(data, cmap=cmap)
+    ncores = size(data, 1)
+    xticks(0:(ncores - 1))
+    yticks(0:(ncores - 1))
+    colorbar()
+    xlabel("Reader Core")
+    ylabel("Writer Core")
+    fs = 110 / ncores
+    for x in 1:ncores
+        for y in 1:ncores
+            v = data[x, y]
+            if isnan(v)
+                text(x - 1, y - 1, "n/a",
+                     ha="center", va="center", color="w", fontsize=fs)
+            else
+                text(x - 1, y - 1, @sprintf("%.1f", data[y, x]),
+                     ha="center", va="center", color="magenta", fontsize=fs)
+            end
+        end
+    end
 end
