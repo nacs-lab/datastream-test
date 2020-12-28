@@ -43,6 +43,12 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
     NACS_EXPORT(ds_helper) static void fill1(size_t nele, int *buff, int v);
     NACS_EXPORT(ds_helper) static void read1(size_t nele, const int *buff);
+
+    NACS_EXPORT(ds_helper) static
+    void calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void read_calc_multi(size_t nele, int nchn, const float *buff,
+                         float t, float freq, float amp);
 };
 
 } // namespace scalar
@@ -63,6 +69,12 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
     NACS_EXPORT(ds_helper) static void fill1(size_t nele, int *buff, int v);
     NACS_EXPORT(ds_helper) static void read1(size_t nele, const int *buff);
+
+    NACS_EXPORT(ds_helper) static
+    void calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void read_calc_multi(size_t nele, int nchn, const float *buff,
+                         float t, float freq, float amp);
 };
 
 } // namespace asimd
@@ -84,6 +96,12 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
     NACS_EXPORT(ds_helper) static void fill1(size_t nele, int *buff, int v);
     NACS_EXPORT(ds_helper) static void read1(size_t nele, const int *buff);
+
+    NACS_EXPORT(ds_helper) static
+    void calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void read_calc_multi(size_t nele, int nchn, const float *buff,
+                         float t, float freq, float amp);
 };
 
 } // namespace sse2
@@ -102,6 +120,12 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
     NACS_EXPORT(ds_helper) static void fill1(size_t nele, int *buff, int v);
     NACS_EXPORT(ds_helper) static void read1(size_t nele, const int *buff);
+
+    NACS_EXPORT(ds_helper) static
+    void calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void read_calc_multi(size_t nele, int nchn, const float *buff,
+                         float t, float freq, float amp);
 };
 
 } // namespace avx
@@ -120,6 +144,12 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
     NACS_EXPORT(ds_helper) static void fill1(size_t nele, int *buff, int v);
     NACS_EXPORT(ds_helper) static void read1(size_t nele, const int *buff);
+
+    NACS_EXPORT(ds_helper) static
+    void calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void read_calc_multi(size_t nele, int nchn, const float *buff,
+                         float t, float freq, float amp);
 };
 
 } // namespace avx2
@@ -138,6 +168,12 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
     NACS_EXPORT(ds_helper) static void fill1(size_t nele, int *buff, int v);
     NACS_EXPORT(ds_helper) static void read1(size_t nele, const int *buff);
+
+    NACS_EXPORT(ds_helper) static
+    void calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void read_calc_multi(size_t nele, int nchn, const float *buff,
+                         float t, float freq, float amp);
 };
 
 } // namespace avx512
