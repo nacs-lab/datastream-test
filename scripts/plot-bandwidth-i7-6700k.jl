@@ -1,12 +1,9 @@
 #!/usr/bin/julia
 
 include("plot-bandwidth-csv.jl")
+include("props_i7-6700k.jl")
 
 const datadir = joinpath(@__DIR__, "../data/")
-
-const L1d = 32 * 1024
-const L2 = 256 * 1024
-const L3_total = 8 * 1024^2
 
 data_normal = load_data(joinpath(datadir, "write-bandwidth-i7-6700k.csv"));
 data_nt = load_data(joinpath(datadir, "write-bandwidth-nt-i7-6700k.csv"));
