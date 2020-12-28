@@ -39,6 +39,9 @@ static int worker_cpu;
 static int nchn_write;
 static int nchn_read;
 
+static int localbuff_sz = 0;
+static int localbuff_blksz = 0;
+
 #if NACS_CPU_X86 || NACS_CPU_X86_64
 struct Backoff {
     NACS_INLINE void wake()
@@ -231,25 +234,40 @@ struct BlockCounters {
     // }
 };
 
-template<typename Kernel>
+template<typename Kernel, bool use_localbuff>
 static void write_block(BlockRing<float> &ring, size_t nrep, size_t nele,
                         float t, float freq, float amp, BlockCounters &counter)
 {
     auto blksz = ring.blksz();
     auto nchn = nchn_write;
     uint64_t ntotal = uint64_t(nrep) * nele / blksz;
+    float *localbuff = (float*)alignTo((uintptr_t)alloca(localbuff_sz * 4 + 64), 64);
     for (uint64_t i = 0; i < ntotal; i++) {
         Backoff backoff;
         auto wrdata = ring.next_write();
         uint32_t nsync = 0;
+        int localbuff_fill = 0;
         while (!wrdata) {
-            nsync++;
-            backoff.pause();
+            if (use_localbuff && localbuff_fill < localbuff_sz) {
+                Kernel::calc_multi_fill(localbuff_blksz, nchn, &localbuff[localbuff_fill],
+                                        t, freq, amp);
+                localbuff_fill += localbuff_blksz;
+            }
+            else {
+                nsync++;
+                backoff.pause();
+            }
             wrdata = ring.next_write();
         }
 
-        if (!Test::empty)
+        if (use_localbuff) {
+            Kernel::copy(localbuff_fill, (int*)localbuff, (int*)wrdata.get());
+            Kernel::calc_multi_fill(blksz - localbuff_fill, nchn,
+                                    wrdata.get() + localbuff_fill, t, freq, amp);
+        }
+        else {
             Kernel::calc_multi_fill(blksz, nchn, wrdata.get(), t, freq, amp);
+        }
         wrdata.done();
         backoff.wake();
 
@@ -257,25 +275,40 @@ static void write_block(BlockRing<float> &ring, size_t nrep, size_t nele,
     }
 }
 
-template<typename Kernel>
+template<typename Kernel, bool use_localbuff>
 static void read_block(BlockRing<float> &ring, size_t nrep, size_t nele,
                        float t, float freq, float amp, BlockCounters &counter)
 {
     auto blksz = ring.blksz();
     auto nchn = nchn_read;
     uint64_t ntotal = uint64_t(nrep) * nele / blksz;
+    float *localbuff = (float*)alignTo((uintptr_t)alloca(localbuff_sz * 4 + 64), 64);
     for (uint64_t i = 0; i < ntotal; i++) {
         Backoff backoff;
         auto rddata = ring.next_read();
         uint32_t nsync = 0;
+        int localbuff_fill = 0;
         while (!rddata) {
-            nsync++;
-            backoff.pause();
+            if (use_localbuff && localbuff_fill < localbuff_sz) {
+                Kernel::calc_multi_fill(localbuff_blksz, nchn, &localbuff[localbuff_fill],
+                                        t, freq, amp);
+                localbuff_fill += localbuff_blksz;
+            }
+            else {
+                nsync++;
+                backoff.pause();
+            }
             rddata = ring.next_read();
         }
 
-        if (!Test::empty)
+        if (use_localbuff) {
+            Kernel::sum(localbuff_fill, localbuff, rddata.get());
+            Kernel::read_calc_multi(blksz - localbuff_fill, nchn,
+                                    rddata.get() + localbuff_fill, t, freq, amp);
+        }
+        else {
             Kernel::read_calc_multi(blksz, nchn, rddata.get(), t, freq, amp);
+        }
         rddata.done();
         backoff.wake();
 
@@ -283,7 +316,7 @@ static void read_block(BlockRing<float> &ring, size_t nrep, size_t nele,
     }
 }
 
-template<typename Kernel>
+template<typename Kernel, bool localbuff>
 static void test_block(size_t nrep, size_t nele, size_t block_size)
 {
     if (nrep < 128)
@@ -306,7 +339,7 @@ static void test_block(size_t nrep, size_t nele, size_t block_size)
         Test::Timer timer;
         timer.enable_cache();
         timer.restart();
-        read_block<Kernel>(ring, nrep, nele, t, freq, amp, rd_counter);
+        read_block<Kernel,localbuff>(ring, nrep, nele, t, freq, amp, rd_counter);
         read_perf = timer.get_res(nrep, nele);
         read_perf["pipe_rw"] = (double)rd_counter.rw / (double)nrep / (double)nele;
         read_perf["pipe_sync"] = (double)rd_counter.sync() / (double)nrep / (double)nele;
@@ -318,7 +351,7 @@ static void test_block(size_t nrep, size_t nele, size_t block_size)
     Test::Timer timer;
     timer.enable_cache();
     timer.restart();
-    write_block<Kernel>(ring, nrep, nele, t, freq, amp, wr_counter);
+    write_block<Kernel,localbuff>(ring, nrep, nele, t, freq, amp, wr_counter);
     auto write_perf = timer.get_res(nrep, nele);
     write_perf["pipe_rw"] = (double)wr_counter.rw / (double)nrep / (double)nele;
     write_perf["pipe_sync"] = (double)wr_counter.sync() / (double)nrep / (double)nele;
@@ -338,6 +371,7 @@ static void test_block(size_t nrep, size_t nele, size_t block_size)
     std::cout << std::endl;
 }
 
+template<bool localbuff>
 static void runtests(size_t size, size_t block_size)
 {
     assert((size % block_size) == 0);
@@ -345,32 +379,32 @@ static void runtests(size_t size, size_t block_size)
 #if NACS_CPU_X86 || NACS_CPU_X86_64
     if (CPUKernel::hasavx512()) {
         std::cout << "AVX512:" << std::endl;
-        test_block<avx512::Kernel>(32 * base_size, size / 4, block_size / 4);
+        test_block<avx512::Kernel,localbuff>(32 * base_size, size / 4, block_size / 4);
         return;
     }
     if (CPUKernel::hasavx2()) {
         std::cout << "AVX2:" << std::endl;
-        test_block<avx2::Kernel>(16 * base_size, size / 4, block_size / 4);
+        test_block<avx2::Kernel,localbuff>(16 * base_size, size / 4, block_size / 4);
         return;
     }
     if (CPUKernel::hasavx()) {
         std::cout << "AVX:" << std::endl;
-        test_block<avx::Kernel>(12 * base_size, size / 4, block_size / 4);
+        test_block<avx::Kernel,localbuff>(12 * base_size, size / 4, block_size / 4);
         return;
     }
     std::cout << "SSE2:" << std::endl;
-    test_block<sse2::Kernel>(6 * base_size, size / 4, block_size / 4);
+    test_block<sse2::Kernel,localbuff>(6 * base_size, size / 4, block_size / 4);
     return;
 #endif
 
 #if NACS_CPU_AARCH64
     std::cout << "ASIMD:" << std::endl;
-    test_block<asimd::Kernel>(6 * base_size, size / 4, block_size / 4);
+    test_block<asimd::Kernel,localbuff>(6 * base_size, size / 4, block_size / 4);
     return;
 #endif
 
     std::cout << "Scalar:" << std::endl;
-    test_block<scalar::Kernel>(base_size, size / 4, block_size / 4);
+    test_block<scalar::Kernel,localbuff>(base_size, size / 4, block_size / 4);
 }
 
 static inline long parse_int(const char *s)
@@ -390,14 +424,20 @@ static inline long parse_int(const char *s)
 
 int main(int argc, char **argv)
 {
-    if (argc < 6) {
-        fprintf(stderr, "Needs at least five arguments\n");
+    if (argc < 8) {
+        fprintf(stderr, "Needs at least seven arguments\n");
         exit(1);
     }
-    int cpu0 = (int)parse_int(argv[5]);
+    size_t size = (size_t)parse_int(argv[1]);
+    size_t block_size = (size_t)parse_int(argv[2]);
+    nchn_write = (int)parse_int(argv[3]);
+    nchn_read = (int)parse_int(argv[4]);
+    localbuff_sz = (int)parse_int(argv[5]) / 4;
+    localbuff_blksz = (int)parse_int(argv[6]) / 4;
+    int cpu0 = (int)parse_int(argv[7]);
     Thread::pin(cpu0);
     if (argc >= 4) {
-        worker_cpu = (int)parse_int(argv[6]);
+        worker_cpu = (int)parse_int(argv[8]);
     }
     else if (cpu0 == 1) {
         worker_cpu = 0;
@@ -405,8 +445,11 @@ int main(int argc, char **argv)
     else {
         worker_cpu = 1;
     }
-    nchn_write = (int)parse_int(argv[3]);
-    nchn_read = (int)parse_int(argv[4]);
-    runtests((size_t)parse_int(argv[1]), (size_t)parse_int(argv[2]));
+    if (localbuff_sz > 0) {
+        runtests<true>(size, block_size);
+    }
+    else {
+        runtests<false>(size, block_size);
+    }
     return 0;
 }

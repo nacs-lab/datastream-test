@@ -166,6 +166,18 @@ void Kernel::read1(size_t nele, const int *buff)
 }
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sum(size_t nele, const float *buff1, const float *buff2)
+{
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" :: "r"(buff1) : "memory");
+    asm volatile ("" :: "r"(buff2) : "memory");
+    for (size_t i = 0; i < nele; i++) {
+        float res = buff1[i] + buff2[i];
+        asm volatile ("" :: "r"(res) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
 void Kernel::calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp)
 {
     asm volatile ("" : "+r"(nele) :: "memory");
@@ -308,6 +320,19 @@ void Kernel::read1(size_t nele, const int *buff)
     for (size_t i = 0; i < nele; i++) {
         auto v = vld1q_s32(&buff[i * 4]);
         asm volatile ("" : "+w"(v) :: "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sum(size_t nele, const float *buff1, const float *buff2)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" :: "r"(buff1) : "memory");
+    asm volatile ("" :: "r"(buff2) : "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = vld1q_f32(&buff1[i * 4]) + vld1q_f32(&buff2[i * 4]);
+        asm volatile ("" :: "w"(res) : "memory");
     }
 }
 
@@ -484,6 +509,19 @@ void Kernel::read1(size_t nele, const int *buff)
     for (size_t i = 0; i < nele; i++) {
         auto v = _mm_load_si128((const __m128i*)&buff[i * 4]);
         asm volatile ("" : "+x"(v) :: "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::sum(size_t nele, const float *buff1, const float *buff2)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" :: "r"(buff1) : "memory");
+    asm volatile ("" :: "r"(buff2) : "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm_load_ps(&buff1[i * 4]) + _mm_load_ps(&buff2[i * 4]);
+        asm volatile ("" :: "x"(res) : "memory");
     }
 }
 
@@ -667,6 +705,19 @@ void Kernel::read1(size_t nele, const int *buff)
 }
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::sum(size_t nele, const float *buff1, const float *buff2)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" :: "r"(buff1) : "memory");
+    asm volatile ("" :: "r"(buff2) : "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm256_load_ps(&buff1[i * 8]) + _mm256_load_ps(&buff2[i * 8]);
+        asm volatile ("" :: "x"(res) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
 void Kernel::calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp)
 {
     nele = nele / 8;
@@ -841,6 +892,19 @@ void Kernel::read1(size_t nele, const int *buff)
 }
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::sum(size_t nele, const float *buff1, const float *buff2)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" :: "r"(buff1) : "memory");
+    asm volatile ("" :: "r"(buff2) : "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm256_load_ps(&buff1[i * 8]) + _mm256_load_ps(&buff2[i * 8]);
+        asm volatile ("" :: "x"(res) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
 void Kernel::calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp)
 {
     nele = nele / 8;
@@ -1011,6 +1075,19 @@ void Kernel::read1(size_t nele, const int *buff)
     for (size_t i = 0; i < nele; i++) {
         auto v = _mm512_load_si512((const __m512i*)&buff[i * 16]);
         asm volatile ("" : "+x"(v) :: "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::sum(size_t nele, const float *buff1, const float *buff2)
+{
+    nele = nele / 16;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" :: "r"(buff1) : "memory");
+    asm volatile ("" :: "r"(buff2) : "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm512_load_ps(&buff1[i * 16]) + _mm512_load_ps(&buff2[i * 16]);
+        asm volatile ("" :: "x"(res) : "memory");
     }
 }
 
