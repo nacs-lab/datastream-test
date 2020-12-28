@@ -278,14 +278,14 @@ static void read_block(BlockRing<int> &ring, size_t nrep, size_t nele,
 }
 
 template<typename Kernel>
-static void test_block(size_t nrep, size_t nele)
+static void test_block(size_t nrep, size_t nele, size_t block_size)
 {
     if (nrep < 128)
         nrep = 128;
     Thread::pin(0);
     int v = (int)Gen::rand_single(10, 1000000);
     auto buff = (int*)mapAnonPage(alignTo(nele * 4, page_size), Prot::RW);
-    BlockRing<int> ring(buff, nele, nele / 8);
+    BlockRing<int> ring(buff, nele, block_size);
     std::map<std::string,double> read_perf;
     std::atomic<bool> done{false};
     BlockCounters rd_counter;
@@ -343,7 +343,6 @@ static void write_pipe(DataPipe<int> &pipe, size_t nrep, size_t nele, int v,
     uint64_t ntotal = uint64_t(nrep) * nele;
     assert(nele > 0);
     assert(nele % 16 == 0);
-    size_t nmin = nele / 16;
     for (uint64_t i = 0; i < ntotal; ) {
         size_t sz;
         int *ptr;
@@ -354,8 +353,6 @@ static void write_pipe(DataPipe<int> &pipe, size_t nrep, size_t nele, int v,
             if (sz <= 15 && sz > 0) {
                 pipe.sync_writer();
             }
-            if (sz > nmin * 2)
-                sz /= 2;
             sz &= ~(size_t)15;
             if (sz != 0)
                 break;
@@ -383,7 +380,6 @@ static void read_pipe(DataPipe<int> &pipe, size_t nrep, size_t nele,
     uint64_t ntotal = uint64_t(nrep) * nele;
     assert(nele > 0);
     assert(nele % 16 == 0);
-    size_t nmin = nele / 16;
     for (uint64_t i = 0; i < ntotal; ) {
         size_t sz;
         const int *ptr;
@@ -394,8 +390,6 @@ static void read_pipe(DataPipe<int> &pipe, size_t nrep, size_t nele,
             if (sz <= 15 && sz > 0) {
                 pipe.sync_reader();
             }
-            if (sz > nmin * 2)
-                sz /= 2;
             sz &= ~(size_t)15;
             if (sz != 0)
                 break;
@@ -416,14 +410,14 @@ static void read_pipe(DataPipe<int> &pipe, size_t nrep, size_t nele,
 }
 
 template<typename Kernel>
-static void test_pipe(size_t nrep, size_t nele)
+static void test_pipe(size_t nrep, size_t nele, size_t block_size)
 {
     if (nrep < 128)
         nrep = 128;
     Thread::pin(0);
     int v = (int)Gen::rand_single(10, 1000000);
     auto buff = (int*)mapAnonPage(alignTo(nele * 4, page_size), Prot::RW);
-    DataPipe<int> pipe(buff, nele);
+    DataPipe<int> pipe(buff, nele, block_size);
     std::map<std::string,double> read_perf;
     std::atomic<bool> done{false};
     Thread::start(std::vector<int>{1}, [=, &pipe, &read_perf, &done] (int) {
@@ -460,43 +454,56 @@ static void test_pipe(size_t nrep, size_t nele)
     std::cout << std::endl;
 }
 
-static void runtests(long size)
+static void runtests(size_t size, size_t block_size)
 {
+    assert((size % block_size) == 0);
 #if NACS_CPU_X86 || NACS_CPU_X86_64
     if (CPUKernel::hasavx512()) {
         std::cout << "AVX512:" << std::endl;
-        test_pipe<avx512::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
-        test_block<avx512::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
+        test_pipe<avx512::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size),
+                                  size / 4, block_size / 4);
+        test_block<avx512::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size),
+                                   size / 4, block_size / 4);
         return;
     }
     if (CPUKernel::hasavx2()) {
         std::cout << "AVX2:" << std::endl;
-        test_pipe<avx2::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
-        test_block<avx2::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
+        test_pipe<avx2::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size),
+                                size / 4, block_size / 4);
+        test_block<avx2::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size),
+                                 size / 4, block_size / 4);
         return;
     }
     if (CPUKernel::hasavx()) {
         std::cout << "AVX:" << std::endl;
-        test_pipe<avx::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
-        test_block<avx::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
+        test_pipe<avx::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size),
+                               size / 4, block_size / 4);
+        test_block<avx::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size),
+                                size / 4, block_size / 4);
         return;
     }
     std::cout << "SSE2:" << std::endl;
-    test_pipe<sse2::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
-    test_block<sse2::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
+    test_pipe<sse2::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size),
+                            size / 4, block_size / 4);
+    test_block<sse2::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size),
+                             size / 4, block_size / 4);
     return;
 #endif
 
 #if NACS_CPU_AARCH64
     std::cout << "ASIMD:" << std::endl;
-    test_pipe<asimd::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
-    test_block<asimd::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
+    test_pipe<asimd::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size),
+                             size / 4, block_size / 4);
+    test_block<asimd::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size),
+                              size / 4, block_size / 4);
     return;
 #endif
 
     std::cout << "Scalar:" << std::endl;
-    test_pipe<scalar::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
-    test_block<scalar::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size), size / 4);
+    test_pipe<scalar::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size),
+                              size / 4, block_size / 4);
+    test_block<scalar::Kernel>(size_t(12 * 16ull * 1024 * 1024 * 1024 / size),
+                               size / 4, block_size / 4);
 }
 
 static inline long parse_int(const char *s)
@@ -516,10 +523,10 @@ static inline long parse_int(const char *s)
 
 int main(int argc, char **argv)
 {
-    if (argc < 2) {
+    if (argc < 3) {
         fprintf(stderr, "Needs at least one argument\n");
         exit(1);
     }
-    runtests(parse_int(argv[1]));
+    runtests((size_t)parse_int(argv[1]), (size_t)parse_int(argv[2]));
     return 0;
 }
