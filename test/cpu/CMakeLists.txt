@@ -14,3 +14,6 @@ target_link_libraries(cpu-nt-write-bandwidth nacs-utils datastream-helpers)
 
 add_executable(cpu-two-threads-ring-buffer cpu-two-threads-ring-buffer.cpp)
 target_link_libraries(cpu-two-threads-ring-buffer nacs-utils datastream-helpers)
+
+add_executable(cpu-two-threads-ring-buffer-compute cpu-two-threads-ring-buffer-compute.cpp)
+target_link_libraries(cpu-two-threads-ring-buffer-compute nacs-utils datastream-helpers)
