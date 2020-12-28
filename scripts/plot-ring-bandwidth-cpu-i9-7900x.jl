@@ -23,7 +23,7 @@ ax = subplot(1, 2, 2)
 plot_cpu2cpu(ax, get_cpu2cpu(data_pipe, ncores_phys))
 ax.set_title("DataPipe")
 
-fig.subplots_adjust(wspace=0.42)
+fig.subplots_adjust(wspace=0.45)
 NaCsPlot.maybe_save("$(prefix)")
 
 NaCsPlot.maybe_show()

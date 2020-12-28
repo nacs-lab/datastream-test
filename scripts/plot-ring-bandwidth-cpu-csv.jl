@@ -83,7 +83,7 @@ function get_cpu2cpu(data, ncores)
         cpu_wr = data.read.cpu_wr[i] + 1
         cpu_rd = data.read.cpu_rd[i] + 1
         @assert isnan(res[cpu_wr, cpu_rd])
-        res[cpu_wr, cpu_rd] = (1024 / data.read.byte_ns[i] + 1024 / data.write.byte_ns[i]) / 2
+        res[cpu_wr, cpu_rd] = (data.read.byte_ns[i] + data.write.byte_ns[i]) / 2
     end
     return res
 end
@@ -106,7 +106,7 @@ function plot_cpu2cpu(ax, data)
     ax.set_xlabel("Reader Core")
     ax.set_ylabel("Writer Core")
     colorbar(im, cax=cax)
-    cax.set_ylabel("Time (ns/KiB)", rotation=-90, va="bottom", fontsize=14)
+    cax.set_ylabel("Throughput (B/ns)", rotation=-90, va="bottom", fontsize=14)
     cax.tick_params(labelsize=12)
     fs = 110 / ncores
     for x in 1:ncores
