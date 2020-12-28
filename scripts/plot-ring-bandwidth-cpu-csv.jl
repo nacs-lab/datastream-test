@@ -7,6 +7,8 @@ using PyCall
 using Printf
 
 @pyimport copy as pycopy
+@pyimport mpl_toolkits.axes_grid1.inset_locator as inset_locator
+const inset_axes = inset_locator.inset_axes
 
 include("utils.jl")
 
@@ -86,26 +88,36 @@ function get_cpu2cpu(data, ncores)
     return res
 end
 
-function plot_cpu2cpu(data)
+function plot_cpu2cpu(ax, data)
     cmap = pycopy.copy(matplotlib.cm.get_cmap("viridis"))
     cmap.set_bad(color="lightgray")
-    imshow(data, cmap=cmap)
+    ax = gca()
+    cax = inset_axes(ax,
+                     width="5%",  # width = 5% of parent_bbox width
+                     height="100%",  # height : 100%
+                     loc="lower left",
+                     bbox_to_anchor=(1.05, 0., 1, 1),
+                     bbox_transform=ax.transAxes,
+                     borderpad=0)
+    im = ax.imshow(data, cmap=cmap)
     ncores = size(data, 1)
-    xticks(0:(ncores - 1))
-    yticks(0:(ncores - 1))
-    colorbar()
-    xlabel("Reader Core")
-    ylabel("Writer Core")
+    ax.set_xticks(0:(ncores - 1))
+    ax.set_yticks(0:(ncores - 1))
+    ax.set_xlabel("Reader Core")
+    ax.set_ylabel("Writer Core")
+    colorbar(im, cax=cax)
+    cax.set_ylabel("Time (ns/KiB)", rotation=-90, va="bottom", fontsize=14)
+    cax.tick_params(labelsize=12)
     fs = 110 / ncores
     for x in 1:ncores
         for y in 1:ncores
             v = data[x, y]
             if isnan(v)
-                text(x - 1, y - 1, "n/a",
-                     ha="center", va="center", color="w", fontsize=fs)
+                ax.text(x - 1, y - 1, "n/a",
+                        ha="center", va="center", color="w", fontsize=fs)
             else
-                text(x - 1, y - 1, @sprintf("%.1f", data[y, x]),
-                     ha="center", va="center", color="magenta", fontsize=fs)
+                ax.text(x - 1, y - 1, @sprintf("%.1f", data[y, x]),
+                        ha="center", va="center", color="magenta", fontsize=fs)
             end
         end
     end

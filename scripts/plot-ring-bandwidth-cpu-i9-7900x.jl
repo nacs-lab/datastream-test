@@ -13,17 +13,17 @@ data_pipe = load_data(joinpath(datadir, "ring-bandwidth-cpu-i9-7900x_datapipe_re
 
 const prefix = joinpath(@__DIR__, "../imgs/ring-bandwidth-cpu-i9-7900x")
 
-figure(figsize=[12.6, 5.6])
+fig = figure(figsize=[12.6, 5.6])
 
 ax = subplot(1, 2, 1)
-plot_cpu2cpu(get_cpu2cpu(data_block, ncores_phys))
-title("BlockRing")
+plot_cpu2cpu(ax, get_cpu2cpu(data_block, ncores_phys))
+ax.set_title("BlockRing")
 
 ax = subplot(1, 2, 2)
-plot_cpu2cpu(get_cpu2cpu(data_pipe, ncores_phys))
-title("DataPipe")
+plot_cpu2cpu(ax, get_cpu2cpu(data_pipe, ncores_phys))
+ax.set_title("DataPipe")
 
-tight_layout(pad=0.6)
+fig.subplots_adjust(wspace=0.42)
 NaCsPlot.maybe_save("$(prefix)")
 
 NaCsPlot.maybe_show()
