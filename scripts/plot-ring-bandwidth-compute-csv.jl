@@ -134,12 +134,12 @@ function plot_stall(data, nblks, localbuffs, nchn_rd, nchn_wr)
             if localbuff == 0
                 plot(line_rd.size, line_rd.pipe_stall_perc,
                      label="$nblk blocks", color="C$(i)", ls="-")
-                plot(line_rd.size, line_wr.pipe_stall_perc,
+                plot(line_wr.size, line_wr.pipe_stall_perc,
                      color="C$(i)", ls=":")
             else
                 plot(line_rd.size, line_rd.pipe_stall_perc,
                      color="C$(i)", ls="--")
-                plot(line_rd.size, line_wr.pipe_stall_perc,
+                plot(line_wr.size, line_wr.pipe_stall_perc,
                      color="C$(i)", ls="-.")
             end
         end
