@@ -246,6 +246,30 @@ void Kernel::calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
     }
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sum_multi(size_t nele, int nins, const float *ins[], float *out)
+{
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        float res = ins[0][i];
+        for (int in = 1; in < nins; in++)
+            res += ins[in][i];
+        out[i] = res;
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
+{
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        float res = ins[0][i];
+        for (int in = 1; in < nins; in++)
+            res += ins[in][i];
+        out[i] = res;
+    }
+}
+
 } // namespace scalar
 
 #if NACS_CPU_AARCH64
@@ -453,6 +477,32 @@ void Kernel::calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
             asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
             res += ap * sinpif_pi(tp * fp);
         }
+        vst1q_f32(&out[i * 4], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sum_multi(size_t nele, int nins, const float *ins[], float *out)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = vld1q_f32(&ins[0][i * 4]);
+        for (int in = 1; in < nins; in++)
+            res += vld1q_f32(&ins[in][i * 4]);
+        vst1q_f32(&out[i * 4], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = vld1q_f32(&ins[0][i * 4]);
+        for (int in = 1; in < nins; in++)
+            res += vld1q_f32(&ins[in][i * 4]);
         vst1q_f32(&out[i * 4], res);
     }
 }
@@ -686,6 +736,32 @@ void Kernel::calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
             asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
             res += ap * sinpif_pi(tp * fp);
         }
+        _mm_stream_ps(&out[i * 4], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::sum_multi(size_t nele, int nins, const float *ins[], float *out)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm_load_ps(&ins[0][i * 4]);
+        for (int in = 1; in < nins; in++)
+            res += _mm_load_ps(&ins[in][i * 4]);
+        _mm_store_ps(&out[i * 4], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm_load_ps(&ins[0][i * 4]);
+        for (int in = 1; in < nins; in++)
+            res += _mm_load_ps(&ins[in][i * 4]);
         _mm_stream_ps(&out[i * 4], res);
     }
 }
@@ -926,6 +1002,32 @@ void Kernel::calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
     }
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::sum_multi(size_t nele, int nins, const float *ins[], float *out)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm256_load_ps(&ins[0][i * 8]);
+        for (int in = 1; in < nins; in++)
+            res += _mm256_load_ps(&ins[in][i * 8]);
+        _mm256_store_ps(&out[i * 8], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm256_load_ps(&ins[0][i * 8]);
+        for (int in = 1; in < nins; in++)
+            res += _mm256_load_ps(&ins[in][i * 8]);
+        _mm256_stream_ps(&out[i * 8], res);
+    }
+}
+
 } // namespace avx
 
 namespace avx2 {
@@ -1157,6 +1259,32 @@ void Kernel::calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
     }
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::sum_multi(size_t nele, int nins, const float *ins[], float *out)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm256_load_ps(&ins[0][i * 8]);
+        for (int in = 1; in < nins; in++)
+            res += _mm256_load_ps(&ins[in][i * 8]);
+        _mm256_store_ps(&out[i * 8], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm256_load_ps(&ins[0][i * 8]);
+        for (int in = 1; in < nins; in++)
+            res += _mm256_load_ps(&ins[in][i * 8]);
+        _mm256_stream_ps(&out[i * 8], res);
+    }
+}
+
 } // namespace avx2
 
 namespace avx512 {
@@ -1384,6 +1512,32 @@ void Kernel::calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
             asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
             res += ap * sinpif_pi(tp * fp);
         }
+        _mm512_stream_ps(&out[i * 16], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::sum_multi(size_t nele, int nins, const float *ins[], float *out)
+{
+    nele = nele / 16;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm512_load_ps(&ins[0][i * 16]);
+        for (int in = 1; in < nins; in++)
+            res += _mm512_load_ps(&ins[in][i * 16]);
+        _mm512_store_ps(&out[i * 16], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
+{
+    nele = nele / 16;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm512_load_ps(&ins[0][i * 16]);
+        for (int in = 1; in < nins; in++)
+            res += _mm512_load_ps(&ins[in][i * 16]);
         _mm512_stream_ps(&out[i * 16], res);
     }
 }

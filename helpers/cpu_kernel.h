@@ -57,6 +57,11 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
                        float *out, float t, float freq, float amp);
+
+    NACS_EXPORT(ds_helper) static
+    void sum_multi(size_t nele, int nins, const float *ins[], float *out);
+    NACS_EXPORT(ds_helper) static
+    void sum_multi_nt(size_t nele, int nins, const float *ins[], float *out);
 };
 
 } // namespace scalar
@@ -91,6 +96,11 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
                        float *out, float t, float freq, float amp);
+
+    NACS_EXPORT(ds_helper) static
+    void sum_multi(size_t nele, int nins, const float *ins[], float *out);
+    NACS_EXPORT(ds_helper) static
+    void sum_multi_nt(size_t nele, int nins, const float *ins[], float *out);
 };
 
 } // namespace asimd
@@ -126,6 +136,11 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
                        float *out, float t, float freq, float amp);
+
+    NACS_EXPORT(ds_helper) static
+    void sum_multi(size_t nele, int nins, const float *ins[], float *out);
+    NACS_EXPORT(ds_helper) static
+    void sum_multi_nt(size_t nele, int nins, const float *ins[], float *out);
 };
 
 } // namespace sse2
@@ -158,6 +173,11 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
                        float *out, float t, float freq, float amp);
+
+    NACS_EXPORT(ds_helper) static
+    void sum_multi(size_t nele, int nins, const float *ins[], float *out);
+    NACS_EXPORT(ds_helper) static
+    void sum_multi_nt(size_t nele, int nins, const float *ins[], float *out);
 };
 
 } // namespace avx
@@ -190,6 +210,11 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
                        float *out, float t, float freq, float amp);
+
+    NACS_EXPORT(ds_helper) static
+    void sum_multi(size_t nele, int nins, const float *ins[], float *out);
+    NACS_EXPORT(ds_helper) static
+    void sum_multi_nt(size_t nele, int nins, const float *ins[], float *out);
 };
 
 } // namespace avx2
@@ -222,6 +247,11 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
                        float *out, float t, float freq, float amp);
+
+    NACS_EXPORT(ds_helper) static
+    void sum_multi(size_t nele, int nins, const float *ins[], float *out);
+    NACS_EXPORT(ds_helper) static
+    void sum_multi_nt(size_t nele, int nins, const float *ins[], float *out);
 };
 
 } // namespace avx512
