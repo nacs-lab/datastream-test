@@ -115,7 +115,7 @@ class BlockRing {
 public:
     using WrData = struct ReturnData<true>;
     using RdData = struct ReturnData<false>;
-    BlockRing(T *buff, size_t size, size_t blksz)
+    BlockRing(T *buff, uint32_t size, uint32_t blksz)
         : m_buff(*buff),
           m_blksz(blksz),
           m_nblk(size / blksz),
@@ -153,18 +153,18 @@ public:
         m_rdidx = idx;
         return RdData(ptr, &meta.written);
     }
-    NACS_INLINE size_t blksz() const
+    NACS_INLINE uint32_t blksz() const
     {
         return m_blksz;
     }
 private:
     // Use references to guarantee the constness of these field to the compiler.
     T &m_buff;
-    const size_t m_blksz;
-    const size_t m_nblk;
+    const uint32_t m_blksz;
+    const uint32_t m_nblk;
     BlkData &m_meta;
-    size_t m_wridx __attribute__((aligned(64))) {0};
-    size_t m_rdidx __attribute__((aligned(64))) {0};
+    uint32_t m_wridx __attribute__((aligned(64))) {0};
+    uint32_t m_rdidx __attribute__((aligned(64))) {0};
 };
 
 struct BlockCounters {
@@ -240,7 +240,7 @@ struct BlockCounters {
 };
 
 template<typename Kernel>
-static void write_block(BlockRing<int> &ring, size_t nrep, size_t nele, int v,
+static void write_block(BlockRing<int> &ring, size_t nrep, uint32_t nele, int v,
                         BlockCounters &counter)
 {
     auto blksz = ring.blksz();
@@ -265,7 +265,7 @@ static void write_block(BlockRing<int> &ring, size_t nrep, size_t nele, int v,
 }
 
 template<typename Kernel>
-static void read_block(BlockRing<int> &ring, size_t nrep, size_t nele,
+static void read_block(BlockRing<int> &ring, size_t nrep, uint32_t nele,
                        BlockCounters &counter)
 {
     auto blksz = ring.blksz();
@@ -290,7 +290,7 @@ static void read_block(BlockRing<int> &ring, size_t nrep, size_t nele,
 }
 
 template<typename Kernel>
-static void test_block(size_t nrep, size_t nele, size_t block_size)
+static void test_block(size_t nrep, uint32_t nele, uint32_t block_size)
 {
     if (nrep < 128)
         nrep = 128;
@@ -349,7 +349,7 @@ struct PipeCounters {
 };
 
 template<typename Kernel>
-static void write_pipe(DataPipe<int> &pipe, size_t nrep, size_t nele, int v,
+static void write_pipe(DataPipe<int> &pipe, size_t nrep, uint32_t nele, int v,
                        PipeCounters &counter)
 {
     uint64_t ntotal = uint64_t(nrep) * nele;
@@ -386,7 +386,7 @@ static void write_pipe(DataPipe<int> &pipe, size_t nrep, size_t nele, int v,
 }
 
 template<typename Kernel>
-static void read_pipe(DataPipe<int> &pipe, size_t nrep, size_t nele,
+static void read_pipe(DataPipe<int> &pipe, size_t nrep, uint32_t nele,
                       PipeCounters &counter)
 {
     uint64_t ntotal = uint64_t(nrep) * nele;
@@ -422,7 +422,7 @@ static void read_pipe(DataPipe<int> &pipe, size_t nrep, size_t nele,
 }
 
 template<typename Kernel>
-static void test_pipe(size_t nrep, size_t nele, size_t block_size)
+static void test_pipe(size_t nrep, uint32_t nele, uint32_t block_size)
 {
     if (nrep < 128)
         nrep = 128;
@@ -465,7 +465,7 @@ static void test_pipe(size_t nrep, size_t nele, size_t block_size)
     std::cout << std::endl;
 }
 
-static void runtests(size_t size, size_t block_size)
+static void runtests(uint32_t size, uint32_t block_size)
 {
     assert((size % block_size) == 0);
 #if NACS_CPU_X86 || NACS_CPU_X86_64
@@ -549,6 +549,6 @@ int main(int argc, char **argv)
     else {
         worker_cpu = 1;
     }
-    runtests((size_t)parse_int(argv[1]), (size_t)parse_int(argv[2]));
+    runtests((uint32_t)parse_int(argv[1]), (uint32_t)parse_int(argv[2]));
     return 0;
 }

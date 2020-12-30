@@ -120,7 +120,7 @@ class BlockRing {
 public:
     using WrData = struct ReturnData<true>;
     using RdData = struct ReturnData<false>;
-    BlockRing(T *buff, size_t size, size_t blksz)
+    BlockRing(T *buff, uint32_t size, uint32_t blksz)
         : m_buff(*buff),
           m_blksz(blksz),
           m_nblk(size / blksz),
@@ -158,18 +158,18 @@ public:
         m_rdidx = idx;
         return RdData(ptr, &meta.written);
     }
-    NACS_INLINE size_t blksz() const
+    NACS_INLINE uint32_t blksz() const
     {
         return m_blksz;
     }
 private:
     // Use references to guarantee the constness of these field to the compiler.
     T &m_buff;
-    const size_t m_blksz;
-    const size_t m_nblk;
+    const uint32_t m_blksz;
+    const uint32_t m_nblk;
     BlkData &m_meta;
-    size_t m_wridx __attribute__((aligned(64))) {0};
-    size_t m_rdidx __attribute__((aligned(64))) {0};
+    uint32_t m_wridx __attribute__((aligned(64))) {0};
+    uint32_t m_rdidx __attribute__((aligned(64))) {0};
 };
 
 struct BlockCounters {
@@ -245,7 +245,7 @@ struct BlockCounters {
 };
 
 template<typename Kernel, bool use_localbuff>
-static void write_block(BlockRing<float> &ring, size_t nrep, size_t nele,
+static void write_block(BlockRing<float> &ring, size_t nrep, uint32_t nele,
                         float t, float freq, float amp, BlockCounters &counter)
 {
     auto blksz = ring.blksz();
@@ -286,7 +286,7 @@ static void write_block(BlockRing<float> &ring, size_t nrep, size_t nele,
 }
 
 template<typename Kernel, bool use_localbuff>
-static void read_block(BlockRing<float> &ring, size_t nrep, size_t nele,
+static void read_block(BlockRing<float> &ring, size_t nrep, uint32_t nele,
                        float t, float freq, float amp, BlockCounters &counter)
 {
     auto blksz = ring.blksz();
@@ -327,7 +327,7 @@ static void read_block(BlockRing<float> &ring, size_t nrep, size_t nele,
 }
 
 template<typename Kernel, bool localbuff>
-static void test_block(size_t nrep, size_t nele, size_t block_size)
+static void test_block(size_t nrep, uint32_t nele, uint32_t block_size)
 {
     if (nrep < 128)
         nrep = 128;
@@ -382,7 +382,7 @@ static void test_block(size_t nrep, size_t nele, size_t block_size)
 }
 
 template<bool localbuff>
-static void runtests(size_t size, size_t block_size)
+static void runtests(uint32_t size, uint32_t block_size)
 {
     assert((size % block_size) == 0);
     size_t base_size = size_t(8ull * 1024 * 1024 * 1024 / size / max(nchn_read, nchn_write));
@@ -438,8 +438,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "Needs at least seven arguments\n");
         exit(1);
     }
-    size_t size = (size_t)parse_int(argv[1]);
-    size_t block_size = (size_t)parse_int(argv[2]);
+    uint32_t size = (uint32_t)parse_int(argv[1]);
+    uint32_t block_size = (uint32_t)parse_int(argv[2]);
     nchn_write = (int)parse_int(argv[3]);
     nchn_read = (int)parse_int(argv[4]);
     localbuff_sz = (int)parse_int(argv[5]) / 4;
