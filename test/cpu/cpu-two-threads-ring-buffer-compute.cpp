@@ -82,23 +82,25 @@ class BlockRing {
     struct BlkData {
         std::atomic<bool> written{false};
     } __attribute__((aligned(64)));
-    template<bool doneval>
-    struct ReturnData {
+    template<bool is_write>
+    class ReturnData {
+        using ptr_t = std::conditional_t<is_write,T*,const T*>;
+    public:
         operator bool() const
         {
             return m_ptr != nullptr;
         }
-        T *get() const
+        ptr_t get() const
         {
             return m_ptr;
         }
-        operator T*() const
+        operator ptr_t() const
         {
             return get();
         }
         void done()
         {
-            m_written->store(doneval, std::memory_order_release);
+            m_written->store(is_write, std::memory_order_release);
         }
     private:
         ReturnData()
@@ -106,12 +108,12 @@ class BlockRing {
               m_written(nullptr)
         {
         }
-        ReturnData(T *ptr, std::atomic<bool> *written)
+        ReturnData(ptr_t ptr, std::atomic<bool> *written)
             : m_ptr(ptr),
               m_written(written)
         {
         }
-        T *m_ptr;
+        ptr_t m_ptr;
         std::atomic<bool> *m_written;
         friend class BlockRing;
     };
@@ -119,20 +121,26 @@ public:
     using WrData = struct ReturnData<true>;
     using RdData = struct ReturnData<false>;
     BlockRing(T *buff, size_t size, size_t blksz)
-        : m_buff(buff),
+        : m_buff(*buff),
           m_blksz(blksz),
-          m_meta(size / blksz)
+          m_nblk(size / blksz),
+          m_meta(*(new BlkData[m_nblk]))
     {
+    }
+    ~BlockRing()
+    {
+        // `m_meta` becomes a dangling reference after this and must not be accessed anymore.
+        delete[] &m_meta;
     }
     NACS_INLINE WrData next_write()
     {
         auto idx = m_wridx;
-        auto &meta = m_meta[idx];
+        auto &meta = (&m_meta)[idx];
         if (meta.written.load(std::memory_order_acquire))
             return WrData();
-        auto ptr = &m_buff[m_blksz * idx];
+        auto ptr = &(&m_buff)[m_blksz * idx];
         idx++;
-        if (unlikely(idx >= m_meta.size()))
+        if (unlikely(idx >= m_nblk))
             idx = 0;
         m_wridx = idx;
         return WrData(ptr, &meta.written);
@@ -140,12 +148,12 @@ public:
     NACS_INLINE RdData next_read()
     {
         auto idx = m_rdidx;
-        auto &meta = m_meta[idx];
+        auto &meta = (&m_meta)[idx];
         if (!meta.written.load(std::memory_order_acquire))
             return RdData();
-        auto ptr = &m_buff[m_blksz * idx];
+        auto ptr = &(&m_buff)[m_blksz * idx];
         idx++;
-        if (unlikely(idx >= m_meta.size()))
+        if (unlikely(idx >= m_nblk))
             idx = 0;
         m_rdidx = idx;
         return RdData(ptr, &meta.written);
@@ -155,9 +163,11 @@ public:
         return m_blksz;
     }
 private:
-    T *const m_buff;
+    // Use references to guarantee the constness of these field to the compiler.
+    T &m_buff;
     const size_t m_blksz;
-    std::vector<BlkData> m_meta;
+    const size_t m_nblk;
+    BlkData &m_meta;
     size_t m_wridx __attribute__((aligned(64))) {0};
     size_t m_rdidx __attribute__((aligned(64))) {0};
 };
