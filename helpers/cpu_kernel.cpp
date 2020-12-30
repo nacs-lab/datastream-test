@@ -210,6 +210,42 @@ void Kernel::read_calc_multi(size_t nele, int nchn, const float *buff,
     }
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::calc_multi(size_t nele, int nchn, int nins, const float *ins[],
+                        float *out, float t, float freq, float amp)
+{
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        float res = ins[0][i];
+        for (int in = 1; in < nins; in++)
+            res += ins[in][i];
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+r"(t), "+r"(freq), "+r"(amp) :: "memory");
+            res += amp * sinpif_pi(t * freq);
+        }
+        out[i] = res;
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
+                           float *out, float t, float freq, float amp)
+{
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        float res = ins[0][i];
+        for (int in = 1; in < nins; in++)
+            res += ins[in][i];
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+r"(t), "+r"(freq), "+r"(amp) :: "memory");
+            res += amp * sinpif_pi(t * freq);
+        }
+        out[i] = res;
+    }
+}
+
 } // namespace scalar
 
 #if NACS_CPU_AARCH64
@@ -374,6 +410,50 @@ void Kernel::read_calc_multi(size_t nele, int nchn, const float *buff,
             res += ap * sinpif_pi(tp * fp);
         }
         asm volatile ("" :: "w"(res) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::calc_multi(size_t nele, int nchn, int nins, const float *ins[],
+                        float *out, float t, float freq, float amp)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = vdupq_n_f32(t);
+    auto fp = vdupq_n_f32(freq);
+    auto ap = vdupq_n_f32(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = vld1q_f32(&ins[0][i * 4]);
+        for (int in = 1; in < nins; in++)
+            res += vld1q_f32(&ins[in][i * 4]);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        vst1q_f32(&out[i * 4], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
+                           float *out, float t, float freq, float amp)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = vdupq_n_f32(t);
+    auto fp = vdupq_n_f32(freq);
+    auto ap = vdupq_n_f32(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = vld1q_f32(&ins[0][i * 4]);
+        for (int in = 1; in < nins; in++)
+            res += vld1q_f32(&ins[in][i * 4]);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        vst1q_f32(&out[i * 4], res);
     }
 }
 
@@ -563,6 +643,50 @@ void Kernel::read_calc_multi(size_t nele, int nchn, const float *buff,
             res += ap * sinpif_pi(tp * fp);
         }
         asm volatile ("" :: "x"(res) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::calc_multi(size_t nele, int nchn, int nins, const float *ins[],
+                        float *out, float t, float freq, float amp)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = _mm_set1_ps(t);
+    auto fp = _mm_set1_ps(freq);
+    auto ap = _mm_set1_ps(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm_load_ps(&ins[0][i * 4]);
+        for (int in = 1; in < nins; in++)
+            res += _mm_load_ps(&ins[in][i * 4]);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        _mm_store_ps(&out[i * 4], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
+                           float *out, float t, float freq, float amp)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = _mm_set1_ps(t);
+    auto fp = _mm_set1_ps(freq);
+    auto ap = _mm_set1_ps(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm_load_ps(&ins[0][i * 4]);
+        for (int in = 1; in < nins; in++)
+            res += _mm_load_ps(&ins[in][i * 4]);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        _mm_stream_ps(&out[i * 4], res);
     }
 }
 
@@ -758,6 +882,50 @@ void Kernel::read_calc_multi(size_t nele, int nchn,
     }
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::calc_multi(size_t nele, int nchn, int nins, const float *ins[],
+                        float *out, float t, float freq, float amp)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = _mm256_set1_ps(t);
+    auto fp = _mm256_set1_ps(freq);
+    auto ap = _mm256_set1_ps(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm256_load_ps(&ins[0][i * 8]);
+        for (int in = 1; in < nins; in++)
+            res += _mm256_load_ps(&ins[in][i * 8]);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        _mm256_store_ps(&out[i * 8], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
+                           float *out, float t, float freq, float amp)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = _mm256_set1_ps(t);
+    auto fp = _mm256_set1_ps(freq);
+    auto ap = _mm256_set1_ps(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm256_load_ps(&ins[0][i * 8]);
+        for (int in = 1; in < nins; in++)
+            res += _mm256_load_ps(&ins[in][i * 8]);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        _mm256_stream_ps(&out[i * 8], res);
+    }
+}
+
 } // namespace avx
 
 namespace avx2 {
@@ -945,6 +1113,50 @@ void Kernel::read_calc_multi(size_t nele, int nchn, const float *buff,
     }
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::calc_multi(size_t nele, int nchn, int nins, const float *ins[],
+                        float *out, float t, float freq, float amp)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = _mm256_set1_ps(t);
+    auto fp = _mm256_set1_ps(freq);
+    auto ap = _mm256_set1_ps(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm256_load_ps(&ins[0][i * 8]);
+        for (int in = 1; in < nins; in++)
+            res += _mm256_load_ps(&ins[in][i * 8]);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        _mm256_store_ps(&out[i * 8], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
+                           float *out, float t, float freq, float amp)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = _mm256_set1_ps(t);
+    auto fp = _mm256_set1_ps(freq);
+    auto ap = _mm256_set1_ps(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm256_load_ps(&ins[0][i * 8]);
+        for (int in = 1; in < nins; in++)
+            res += _mm256_load_ps(&ins[in][i * 8]);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        _mm256_stream_ps(&out[i * 8], res);
+    }
+}
+
 } // namespace avx2
 
 namespace avx512 {
@@ -1129,6 +1341,50 @@ void Kernel::read_calc_multi(size_t nele, int nchn, const float *buff,
             res += ap * sinpif_pi(tp * fp);
         }
         asm volatile ("" :: "x"(res) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::calc_multi(size_t nele, int nchn, int nins, const float *ins[],
+                        float *out, float t, float freq, float amp)
+{
+    nele = nele / 16;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = _mm512_set1_ps(t);
+    auto fp = _mm512_set1_ps(freq);
+    auto ap = _mm512_set1_ps(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm512_load_ps(&ins[0][i * 16]);
+        for (int in = 1; in < nins; in++)
+            res += _mm512_load_ps(&ins[in][i * 16]);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        _mm512_store_ps(&out[i * 16], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
+                           float *out, float t, float freq, float amp)
+{
+    nele = nele / 16;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = _mm512_set1_ps(t);
+    auto fp = _mm512_set1_ps(freq);
+    auto ap = _mm512_set1_ps(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm512_load_ps(&ins[0][i * 16]);
+        for (int in = 1; in < nins; in++)
+            res += _mm512_load_ps(&ins[in][i * 16]);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        _mm512_stream_ps(&out[i * 16], res);
     }
 }
 
