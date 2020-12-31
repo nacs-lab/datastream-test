@@ -55,6 +55,38 @@ private:
     bool m_stall_on{false};
 };
 
+// number of cycles since power-on
+static NACS_INLINE uint64_t cycleclock()
+{
+#if NACS_CPU_X86_64
+    uint64_t low, high;
+    __asm__ volatile("rdtsc" : "=a"(low), "=d"(high));
+    return (high << 32) | low;
+#elif NACS_CPU_X86
+    unt64_t ret;
+    __asm__ volatile("rdtsc" : "=A"(ret));
+    return ret;
+#elif NACS_CPU_AARCH64
+    // System timer of ARMv8 runs at a different frequency than the CPU's.
+    // The frequency is fixed, typically in the range 1-50MHz.  It can be
+    // read at CNTFRQ special register.  We assume the OS has set up
+    // the virtual timer properly.
+    uint64_t virtual_timer_value;
+    __asm__ volatile("mrs %0, cntvct_el0" : "=r"(virtual_timer_value));
+    return virtual_timer_value;
+#elif NACS_CPU_PPC64
+    // This returns a time-base, which is not always precisely a cycle-count.
+    // https://reviews.llvm.org/D78084
+    uint64_t tb;
+    asm volatile("mfspr %0, 268" : "=r" (tb));
+    return tb;
+#else
+    #warning No cycleclock() definition for your platform
+    // copy from https://github.com/google/benchmark/blob/v1.5.0/src/cycleclock.h
+    return 0;
+#endif
+}
+
 }
 
 #endif
