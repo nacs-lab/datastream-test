@@ -113,8 +113,8 @@ class BlockRing {
         friend class BlockRing;
     };
 public:
-    using WrData = struct ReturnData<true>;
-    using RdData = struct ReturnData<false>;
+    using WrData = ReturnData<true>;
+    using RdData = ReturnData<false>;
     BlockRing(T *buff, uint32_t size, uint32_t blksz)
         : m_buff(*buff),
           m_blksz(blksz),
