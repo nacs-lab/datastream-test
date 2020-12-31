@@ -202,6 +202,23 @@ void Kernel::calc_multi_fill(size_t nele, int nchn, float *buff, float t, float 
 }
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::calc_multi_fill_nt(size_t nele, int nchn, float *buff,
+                                float t, float freq, float amp)
+{
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    for (size_t i = 0; i < nele; i++) {
+        float res = 0;
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+r"(t), "+r"(freq), "+r"(amp) :: "memory");
+            res += amp * sinpif_pi(t * freq);
+        }
+        buff[i] = res;
+    }
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
 void Kernel::read_calc_multi(size_t nele, int nchn, const float *buff,
                              float t, float freq, float amp)
 {
@@ -415,6 +432,27 @@ void Kernel::sum(size_t nele, const float *buff1, const float *buff2)
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
 void Kernel::calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = vdupq_n_f32(t);
+    auto fp = vdupq_n_f32(freq);
+    auto ap = vdupq_n_f32(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = vdupq_n_f32(0);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        vst1q_f32(&buff[i * 4], res);
+    }
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::calc_multi_fill_nt(size_t nele, int nchn, float *buff,
+                                float t, float freq, float amp)
 {
     nele = nele / 4;
     asm volatile ("" : "+r"(nele) :: "memory");
@@ -702,6 +740,27 @@ void Kernel::calc_multi_fill(size_t nele, int nchn, float *buff, float t, float 
 }
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::calc_multi_fill_nt(size_t nele, int nchn, float *buff,
+                                float t, float freq, float amp)
+{
+    nele = nele / 4;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = _mm_set1_ps(t);
+    auto fp = _mm_set1_ps(freq);
+    auto ap = _mm_set1_ps(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm_set1_ps(0);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        _mm_stream_ps(&buff[i * 4], res);
+    }
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
 void Kernel::read_calc_multi(size_t nele, int nchn, const float *buff,
                              float t, float freq, float amp)
 {
@@ -974,6 +1033,27 @@ void Kernel::calc_multi_fill(size_t nele, int nchn, float *buff, float t, float 
 }
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::calc_multi_fill_nt(size_t nele, int nchn, float *buff,
+                                float t, float freq, float amp)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = _mm256_set1_ps(t);
+    auto fp = _mm256_set1_ps(freq);
+    auto ap = _mm256_set1_ps(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm256_set1_ps(0);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        _mm256_stream_ps(&buff[i * 8], res);
+    }
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
 void Kernel::read_calc_multi(size_t nele, int nchn,
                              const float *buff, float t, float freq, float amp)
 {
@@ -1241,6 +1321,27 @@ void Kernel::calc_multi_fill(size_t nele, int nchn, float *buff, float t, float 
 }
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::calc_multi_fill_nt(size_t nele, int nchn, float *buff,
+                                float t, float freq, float amp)
+{
+    nele = nele / 8;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = _mm256_set1_ps(t);
+    auto fp = _mm256_set1_ps(freq);
+    auto ap = _mm256_set1_ps(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm256_set1_ps(0);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        _mm256_stream_ps(&buff[i * 8], res);
+    }
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
 void Kernel::read_calc_multi(size_t nele, int nchn, const float *buff,
                              float t, float freq, float amp)
 {
@@ -1503,6 +1604,27 @@ void Kernel::calc_multi_fill(size_t nele, int nchn, float *buff, float t, float 
             res += ap * sinpif_pi(tp * fp);
         }
         _mm512_store_ps(&buff[i * 16], res);
+    }
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::calc_multi_fill_nt(size_t nele, int nchn, float *buff,
+                                float t, float freq, float amp)
+{
+    nele = nele / 16;
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = _mm512_set1_ps(t);
+    auto fp = _mm512_set1_ps(freq);
+    auto ap = _mm512_set1_ps(amp);
+    for (size_t i = 0; i < nele; i++) {
+        auto res = _mm512_set1_ps(0);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+x"(tp), "+x"(fp), "+x"(ap) :: "memory");
+            res += ap * sinpif_pi(tp * fp);
+        }
+        _mm512_stream_ps(&buff[i * 16], res);
     }
     asm volatile ("" :: "r"(buff) : "memory");
 }

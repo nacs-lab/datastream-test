@@ -49,6 +49,8 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static
+    void calc_multi_fill_nt(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
     void read_calc_multi(size_t nele, int nchn, const float *buff,
                          float t, float freq, float amp);
 
@@ -88,6 +90,8 @@ struct Kernel {
 
     NACS_EXPORT(ds_helper) static
     void calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void calc_multi_fill_nt(size_t nele, int nchn, float *buff, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static
     void read_calc_multi(size_t nele, int nchn, const float *buff,
                          float t, float freq, float amp);
@@ -130,6 +134,8 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static
+    void calc_multi_fill_nt(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
     void read_calc_multi(size_t nele, int nchn, const float *buff,
                          float t, float freq, float amp);
 
@@ -167,6 +173,8 @@ struct Kernel {
 
     NACS_EXPORT(ds_helper) static
     void calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void calc_multi_fill_nt(size_t nele, int nchn, float *buff, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static
     void read_calc_multi(size_t nele, int nchn, const float *buff,
                          float t, float freq, float amp);
@@ -206,6 +214,8 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static
+    void calc_multi_fill_nt(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
     void read_calc_multi(size_t nele, int nchn, const float *buff,
                          float t, float freq, float amp);
 
@@ -243,6 +253,8 @@ struct Kernel {
 
     NACS_EXPORT(ds_helper) static
     void calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void calc_multi_fill_nt(size_t nele, int nchn, float *buff, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static
     void read_calc_multi(size_t nele, int nchn, const float *buff,
                          float t, float freq, float amp);
