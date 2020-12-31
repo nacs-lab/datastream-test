@@ -41,6 +41,7 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static void fill(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void fill_nt(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
+    NACS_EXPORT(ds_helper) static void copy_nt(size_t nele, const int *in, int *out);
     NACS_EXPORT(ds_helper) static void fill1(size_t nele, int *buff, int v);
     NACS_EXPORT(ds_helper) static void read1(size_t nele, const int *buff);
     NACS_EXPORT(ds_helper) static void sum(size_t nele, const float *buff1, const float *buff2);
@@ -80,6 +81,7 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static void fill(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void fill_nt(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
+    NACS_EXPORT(ds_helper) static void copy_nt(size_t nele, const int *in, int *out);
     NACS_EXPORT(ds_helper) static void fill1(size_t nele, int *buff, int v);
     NACS_EXPORT(ds_helper) static void read1(size_t nele, const int *buff);
     NACS_EXPORT(ds_helper) static void sum(size_t nele, const float *buff1, const float *buff2);
@@ -120,6 +122,7 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static void fill(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void fill_nt(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
+    NACS_EXPORT(ds_helper) static void copy_nt(size_t nele, const int *in, int *out);
     NACS_EXPORT(ds_helper) static void fill1(size_t nele, int *buff, int v);
     NACS_EXPORT(ds_helper) static void read1(size_t nele, const int *buff);
     NACS_EXPORT(ds_helper) static void sum(size_t nele, const float *buff1, const float *buff2);
@@ -157,6 +160,7 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static void fill(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void fill_nt(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
+    NACS_EXPORT(ds_helper) static void copy_nt(size_t nele, const int *in, int *out);
     NACS_EXPORT(ds_helper) static void fill1(size_t nele, int *buff, int v);
     NACS_EXPORT(ds_helper) static void read1(size_t nele, const int *buff);
     NACS_EXPORT(ds_helper) static void sum(size_t nele, const float *buff1, const float *buff2);
@@ -194,6 +198,7 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static void fill(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void fill_nt(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
+    NACS_EXPORT(ds_helper) static void copy_nt(size_t nele, const int *in, int *out);
     NACS_EXPORT(ds_helper) static void fill1(size_t nele, int *buff, int v);
     NACS_EXPORT(ds_helper) static void read1(size_t nele, const int *buff);
     NACS_EXPORT(ds_helper) static void sum(size_t nele, const float *buff1, const float *buff2);
@@ -231,6 +236,7 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static void fill(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void fill_nt(size_t nrep, size_t ncalc, int *buff, int v);
     NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
+    NACS_EXPORT(ds_helper) static void copy_nt(size_t nele, const int *in, int *out);
     NACS_EXPORT(ds_helper) static void fill1(size_t nele, int *buff, int v);
     NACS_EXPORT(ds_helper) static void read1(size_t nele, const int *buff);
     NACS_EXPORT(ds_helper) static void sum(size_t nele, const float *buff1, const float *buff2);
