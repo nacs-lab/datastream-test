@@ -305,6 +305,9 @@ class Worker {
             return res;
         }
         else {
+            // GCC 7 warns about unused arguments
+            (void)ins;
+            (void)nins;
             return nullptr;
         }
     }
@@ -360,6 +363,8 @@ public:
             m_blockcnt = 0;
             m_blocktime.resize(total);
         }
+        // GCC 7 warns about unused arguments
+        (void)total;
     }
 
     __attribute__((flatten))
@@ -375,6 +380,8 @@ public:
                 *blocktime = std::move(worker.m_blocktime);
             }
         }
+        // GCC 7 warns about unused arguments
+        (void)blocktime;
     }
 
 private:
@@ -468,6 +475,10 @@ private:
                 return;
             }
         }
+        // GCC 7 warns about unused arguments
+        (void)t;
+        (void)freq;
+        (void)amp;
         m_backoff.pause();
     }
     NACS_INLINE void reset()
