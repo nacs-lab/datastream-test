@@ -2,32 +2,18 @@ total_block: 1048576
 block_size: 16384
 num_block: 16
 num_block_final: 16384
+num_channel: 10
+localbuff: true
 workers:
   - cpu: 0
-    num_channel: 10
-    localbuff: true
   - cpu: 1
-    num_channel: 10
-    localbuff: true
   - cpu: 2
-    num_channel: 10
-    localbuff: true
     input_cpu: [0, 1]
   - cpu: 3
-    num_channel: 10
-    localbuff: true
   - cpu: 4
-    num_channel: 10
-    localbuff: true
   - cpu: 5
-    num_channel: 10
-    localbuff: true
   - cpu: 6
-    num_channel: 10
-    localbuff: true
     input_cpu: [3, 4, 5]
   - cpu: 7
-    num_channel: 10
-    localbuff: true
     input_cpu: [2, 6]
     final: true
