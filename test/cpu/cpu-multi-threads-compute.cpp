@@ -574,6 +574,7 @@ struct Config {
         auto workers = required_key("workers");
         if (!workers.IsSequence())
             throw std::runtime_error("Invalid workers config.");
+        std::map<int,int> cpu_map;
         for (const auto &worker: workers) {
             if (!worker.IsMap())
                 throw std::runtime_error("Invalid workers config.");
@@ -583,18 +584,31 @@ struct Config {
                 throw std::runtime_error(std::string("Required worker key '") + name
                                          + "' missing.");
             };
+            int worker_id = (int)conf.workers.size();
             auto &wc = conf.workers.emplace_back();
             wc.cpu = required_key("cpu").as<int>();
+            if (cpu_map.count(wc.cpu))
+                throw std::runtime_error("Multiple workers on the same CPU");
+            cpu_map[wc.cpu] = worker_id;
             if (auto node = worker["num_channel"])
                 wc.nchn = node.as<int>();
             if (auto node = worker["localbuff"])
                 wc.use_localbuff = node.as<bool>();
             if (auto node = worker["final"])
                 wc.is_final = node.as<bool>();
-            if (auto ins_node = worker["input"]) {
+            if (auto ins_node = worker["input_cpu"]) {
                 if (!ins_node.IsSequence())
                     throw std::runtime_error("Invalid worker input config.");
                 wc.ins = ins_node.as<std::vector<int>>();
+            }
+        }
+
+        // Map from CPU id to worker ID
+        for (auto &wc: conf.workers) {
+            for (auto &in: wc.ins) {
+                if (!cpu_map.count(in))
+                    throw std::runtime_error("Invalid input CPU.");
+                in = cpu_map[in];
             }
         }
 
