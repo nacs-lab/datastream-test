@@ -13,17 +13,19 @@ set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
 
 find_package(PkgConfig REQUIRED)
+find_package(yaml-cpp REQUIRED)
 pkg_check_modules(DEPS REQUIRED nacs-utils>=10.2)
 
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden -Wconversion
-  -fno-math-errno -Wno-sign-conversion -Wno-psabi -D_FILE_OFFSET_BITS=64 ${DEPS_CFLAGS})
+  -fno-math-errno -Wno-sign-conversion -Wno-psabi -D_FILE_OFFSET_BITS=64
+  ${DEPS_CFLAGS} ${TCDEP_CFLAGS})
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # We have GCC specific warning options that makes Clang unhappy.
   # Adding this unconditionally cause GCC to issue a warning if there are other warnings
   # so only add this conditionally for clang.
   add_definitions(-Wno-unknown-warning-option)
 endif()
-include_directories(${DEPS_INCLUDE_DIRS})
+include_directories(${DEPS_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIR})
 
 set(LINKER_FLAGS "-Wl,--as-needed -Wl,--no-undefined -Wl,--gc-sections -pthread -fno-math-errno")
 set(LINKER_FLAGS "${LINKER_FLAGS} -Wl,-Bsymbolic-function ${DEPS_LDFLAGS_OTHER}")
