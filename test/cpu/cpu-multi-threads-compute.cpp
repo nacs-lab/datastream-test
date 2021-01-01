@@ -30,6 +30,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <fstream>
 #include <iostream>
 
 #include <assert.h>
@@ -650,11 +651,13 @@ struct MMapDeleter {
 
 struct TestRes {
     std::vector<uint64_t> blocktime;
-    void print(std::ostream &stm)
+    void summary(std::ostream &stm)
     {
-        YAML::Emitter out;
-        out << YAML::Flow << blocktime;
-        stm << out.c_str() << std::endl;
+        stm << (double)blocktime.back() / (double)blocktime.size() << std::endl;
+    }
+    void save(std::ostream &stm)
+    {
+        stm.write((const char*)&blocktime[0], blocktime.size() * sizeof(uint64_t));
     }
 };
 
@@ -793,7 +796,10 @@ int main(int argc, char **argv)
         exit(1);
     }
     auto res = runtests(Config::loadYAML(argv[1]));
-    // res.print(std::cout);
-    std::cout << res.blocktime.back() << std::endl;
+    res.summary(std::cout);
+    if (argc >= 3) {
+        std::ofstream stm(argv[2]);
+        res.save(stm);
+    }
     return 0;
 }
