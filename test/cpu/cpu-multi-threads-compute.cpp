@@ -78,7 +78,7 @@ class BlockRing {
     struct BlkData {
         std::atomic<bool> written{false};
     } __attribute__((aligned(64)));
-    template<bool is_write>
+    template<bool is_write,bool dummy>
     class ReturnData {
         using ptr_t = std::conditional_t<is_write,T*,const T*>;
     public:
@@ -96,7 +96,9 @@ class BlockRing {
         }
         void done()
         {
-            m_written->store(is_write, std::memory_order_release);
+            if constexpr (!dummy) {
+                m_written->store(is_write, std::memory_order_release);
+            }
         }
         ReturnData()
             : m_ptr(nullptr),
@@ -114,8 +116,10 @@ class BlockRing {
         friend class BlockRing;
     };
 public:
-    using WrData = ReturnData<true>;
-    using RdData = ReturnData<false>;
+    template<bool dummy>
+    using WrData = ReturnData<true,dummy>;
+    template<bool dummy>
+    using RdData = ReturnData<false,dummy>;
     BlockRing(T *buff, uint32_t size, uint32_t blksz)
         : m_buff(*buff),
           m_blksz(blksz),
@@ -140,31 +144,55 @@ public:
         // `m_meta` becomes a dangling reference after this and must not be accessed anymore.
         delete[] &m_meta;
     }
-    NACS_INLINE WrData next_write()
+    template<bool dummy=false>
+    NACS_INLINE WrData<dummy> next_write()
     {
-        auto idx = m_wridx;
-        auto &meta = (&m_meta)[idx];
-        if (meta.written.load(std::memory_order_acquire))
-            return WrData();
-        auto ptr = &(&m_buff)[m_blksz * idx];
-        idx++;
-        if (unlikely(idx >= m_nblk))
-            idx = 0;
-        m_wridx = idx;
-        return WrData(ptr, &meta.written);
+        if constexpr (dummy) {
+            auto idx = m_wridx;
+            auto ptr = &(&m_buff)[m_blksz * idx];
+            idx++;
+            if (unlikely(idx >= m_nblk))
+                idx = 0;
+            m_wridx = idx;
+            return WrData<dummy>(ptr, nullptr);
+        }
+        else {
+            auto idx = m_wridx;
+            auto &meta = (&m_meta)[idx];
+            if (meta.written.load(std::memory_order_acquire))
+                return WrData<dummy>();
+            auto ptr = &(&m_buff)[m_blksz * idx];
+            idx++;
+            if (unlikely(idx >= m_nblk))
+                idx = 0;
+            m_wridx = idx;
+            return WrData<dummy>(ptr, &meta.written);
+        }
     }
-    NACS_INLINE RdData next_read()
+    template<bool dummy=false>
+    NACS_INLINE RdData<dummy> next_read()
     {
-        auto idx = m_rdidx;
-        auto &meta = (&m_meta)[idx];
-        if (!meta.written.load(std::memory_order_acquire))
-            return RdData();
-        auto ptr = &(&m_buff)[m_blksz * idx];
-        idx++;
-        if (unlikely(idx >= m_nblk))
-            idx = 0;
-        m_rdidx = idx;
-        return RdData(ptr, &meta.written);
+        if constexpr (dummy) {
+            auto idx = m_rdidx;
+            auto ptr = &(&m_buff)[m_blksz * idx];
+            idx++;
+            if (unlikely(idx >= m_nblk))
+                idx = 0;
+            m_rdidx = idx;
+            return RdData<dummy>(ptr, nullptr);
+        }
+        else {
+            auto idx = m_rdidx;
+            auto &meta = (&m_meta)[idx];
+            if (!meta.written.load(std::memory_order_acquire))
+                return RdData<dummy>();
+            auto ptr = &(&m_buff)[m_blksz * idx];
+            idx++;
+            if (unlikely(idx >= m_nblk))
+                idx = 0;
+            m_rdidx = idx;
+            return RdData<dummy>(ptr, &meta.written);
+        }
     }
     NACS_INLINE uint32_t blksz() const
     {
@@ -303,12 +331,12 @@ public:
     {
         auto blksz = m_out.blksz();
         while (true) {
-            auto wrdata = m_out.next_write();
+            auto wrdata = m_out.next_write<is_final>();
             while (!wrdata) {
                 if (unlikely(m_done.load(std::memory_order_relaxed)))
                     return;
                 backoff(t, freq, amp);
-                wrdata = m_out.next_write();
+                wrdata = m_out.next_write<is_final>();
             }
 
             fill_out(wrdata.get(), blksz, t, freq, amp);
@@ -443,8 +471,9 @@ private:
     }
     NACS_INLINE void reset()
     {
-        if constexpr (use_localbuff)
+        if constexpr (use_localbuff) {
             m_localbuff_fill = 0;
+        }
         m_backoff.wake();
         m_backoff.reset();
     }
@@ -607,6 +636,12 @@ struct MMapDeleter {
 
 struct TestRes {
     std::vector<uint64_t> blocktime;
+    void print(std::ostream &stm)
+    {
+        YAML::Emitter out;
+        out << YAML::Flow << blocktime;
+        stm << out.c_str() << std::endl;
+    }
 };
 
 template<typename Kernel>
@@ -679,6 +714,7 @@ static TestRes test_threads(const Config &config)
     }
     TestRes res;
     std::atomic<int> done_count{0};
+    auto t0 = Test::cycleclock();
     Thread::start(cpus, [&] (int i) {
         auto &w = workers[i];
         w.run<Kernel>(w.is_final ? &res.blocktime : nullptr);
@@ -688,6 +724,8 @@ static TestRes test_threads(const Config &config)
         using namespace std::chrono_literals;
         std::this_thread::sleep_for(10ms);
     }
+    for (auto &t: res.blocktime)
+        t -= t0;
     return res;
 }
 
@@ -741,6 +779,7 @@ int main(int argc, char **argv)
         exit(1);
     }
     auto res = runtests(Config::loadYAML(argv[1]));
-    // TODO
+    // res.print(std::cout);
+    std::cout << res.blocktime.back() << std::endl;
     return 0;
 }
