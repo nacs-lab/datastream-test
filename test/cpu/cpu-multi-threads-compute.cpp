@@ -575,6 +575,12 @@ struct Config {
         auto workers = required_key("workers");
         if (!workers.IsSequence())
             throw std::runtime_error("Invalid workers config.");
+        int def_nchn = 1;
+        if (auto node = file["num_channel"])
+            def_nchn = node.as<int>();
+        bool def_localbuff = false;
+        if (auto node = file["localbuff"])
+            def_localbuff = node.as<bool>();
         std::map<int,int> cpu_map;
         for (const auto &worker: workers) {
             if (!worker.IsMap())
@@ -591,6 +597,8 @@ struct Config {
             if (cpu_map.count(wc.cpu))
                 throw std::runtime_error("Multiple workers on the same CPU");
             cpu_map[wc.cpu] = worker_id;
+            wc.nchn = def_nchn;
+            wc.use_localbuff = def_localbuff;
             if (auto node = worker["num_channel"])
                 wc.nchn = node.as<int>();
             if (auto node = worker["localbuff"])
