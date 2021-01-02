@@ -1,0 +1,22 @@
+total_block: 4194304
+block_size: 16384
+num_block: 16
+num_block_final: 16384
+num_channel: 2
+localbuff: 2
+workers:
+  - cpu: 0
+  - cpu: 1
+  - cpu: 2
+    input_cpu: [0, 1]
+  - cpu: 3
+  - cpu: 4
+  - cpu: 5
+    input_cpu: [3, 4]
+  - cpu: 6
+  - cpu: 7
+  - cpu: 8
+    input_cpu: [6, 7]
+  - cpu: 9
+    input_cpu: [2, 5, 8]
+    final: true
