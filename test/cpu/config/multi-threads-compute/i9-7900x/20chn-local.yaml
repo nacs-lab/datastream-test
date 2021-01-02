@@ -3,7 +3,7 @@ block_size: 16384
 num_block: 16
 num_block_final: 16384
 num_channel: 2
-localbuff: true
+localbuff: 1
 workers:
   - cpu: 0
   - cpu: 1
