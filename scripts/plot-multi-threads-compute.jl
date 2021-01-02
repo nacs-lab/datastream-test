@@ -124,15 +124,15 @@ end
 # get_speed_limits(times, samples) = get_speed_limit.(Ref(times), samples)
 
 function plot_line(times, xscale, yscale; kws...)
-    if length(times) <= 1025
-        xs = [1:(length(times) - 1);]
-    else
-        xs = Int[1:1024;]
-        x = length(times) - 1
-        while x > 1024
-            insert!(xs, 1025, x)
-            x = floor(Int, x * 0.9)
+    xs = Int[]
+    x = length(times) - 1
+    while x > 0
+        insert!(xs, 1, x)
+        xnew = floor(Int, x * 0.95)
+        if xnew == x
+            xnew = x - 1
         end
+        x = xnew
     end
     plot(xs .* xscale, get_speed_limit.(Ref(times), xs) .* yscale; kws...)
 end
