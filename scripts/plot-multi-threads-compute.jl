@@ -66,16 +66,62 @@ function load_all_times(dir, ghz)
     return res
 end
 
-function get_speed_limit(times, samples)
-    tmax = zero(eltype(times))
-    for i in 1:length(times) - samples
+@inline _max(v1, v2) = v1 > v2 ? v1 : v2
+
+# Somehow these are actually slower
+# Also LLVM can't vectorize this right now...
+# @inline _max(v1::Float32, v2::Float32) =
+#     ccall("llvm.maxnum.f32", llvmcall, Float32, (Float32, Float32), v1, v2)
+# @inline _max(v1::Float64, v2::Float64) =
+#     ccall("llvm.maxnum.f64", llvmcall, Float64, (Float64, Float64), v1, v2)
+# @inline function get_speed_limit(times::Vector{Float64}, samples)
+#     tmaxv = (VecElement(0.0), VecElement(0.0), VecElement(0.0), VecElement(0.0))
+#     imax = length(times) - samples
+#     @inbounds for i in 1:4:(imax - 3)
+#         dt1 = times[i + samples] - times[i]
+#         dt2 = times[i + samples + 1] - times[i + 1]
+#         dt3 = times[i + samples + 2] - times[i + 2]
+#         dt4 = times[i + samples + 3] - times[i + 3]
+#         tmaxv = ccall("llvm.maxnum.v4f64", llvmcall, NTuple{4,VecElement{Float64}},
+#                       (NTuple{4,VecElement{Float64}}, NTuple{4,VecElement{Float64}}),
+#                       tmaxv, (VecElement(dt1), VecElement(dt2),
+#                               VecElement(dt3), VecElement(dt4)))
+#     end
+#     tmax = ccall("llvm.experimental.vector.reduce.fmax.v4f64", llvmcall, Float64,
+#                  (NTuple{4,VecElement{Float64}},), tmaxv)
+#     # tmax = _max(_max(tmaxv[1].value, tmaxv[2].value), _max(tmaxv[3].value, tmaxv[4].value))
+#     @inbounds @simd ivdep for i in (imax - 2):imax
+#         dt = times[i + samples] - times[i]
+#         tmax = _max(dt, tmax)
+#     end
+#     return samples / tmax
+# end
+
+@inline function get_speed_limit(times, samples)
+    tmax1 = zero(eltype(times))
+    tmax2 = zero(eltype(times))
+    tmax3 = zero(eltype(times))
+    tmax4 = zero(eltype(times))
+    imax = length(times) - samples
+    @inbounds for i in 1:4:(imax - 3)
+        dt1 = times[i + samples] - times[i]
+        dt2 = times[i + samples + 1] - times[i + 1]
+        dt3 = times[i + samples + 2] - times[i + 2]
+        dt4 = times[i + samples + 3] - times[i + 3]
+        tmax1 = _max(dt1, tmax1)
+        tmax2 = _max(dt2, tmax2)
+        tmax3 = _max(dt3, tmax3)
+        tmax4 = _max(dt4, tmax4)
+    end
+    tmax = _max(_max(tmax1, tmax2), _max(tmax3, tmax4))
+    @inbounds @simd ivdep for i in _max(imax - 2, 1):imax
         dt = times[i + samples] - times[i]
-        if dt > tmax
-            tmax = dt
-        end
+        tmax = _max(dt, tmax)
     end
     return samples / tmax
 end
+
+# get_speed_limits(times, samples) = get_speed_limit.(Ref(times), samples)
 
 function plot_line(times, xscale, yscale; kws...)
     if length(times) <= 1025
