@@ -1,5 +1,6 @@
 #!/usr/bin/julia
 
+using NaCsCalc
 using NaCsPlot
 using PyPlot
 using LibArchive
@@ -50,10 +51,16 @@ read_compressed_res(fname) = LibArchive.Reader(fname) do reader
     return vs
 end
 
-get_times(data, ghz) = @view(data[end ÷ 16:end]) ./ ghz
+struct TimeInfo
+    times::Vector{Float64}
+    max_time::Dict{Int,Float64}
+    TimeInfo(times) = new(times, Dict{Int,Float64}())
+end
+
+get_times(data, ghz) = TimeInfo(@view(data[end ÷ 16:end]) ./ ghz)
 
 function load_all_times(dir, ghz)
-    res = Dict{String,Vector{Vector{Float64}}}()
+    res = Dict{String,Vector{TimeInfo}}()
     for d in readdir(dir, join=true)
         isdir(d) || continue
         for f in readdir(d, join=true)
@@ -97,7 +104,8 @@ end
 #     return samples / tmax
 # end
 
-@inline function get_speed_limit(times, samples)
+@inline get_max_time(timeinfo, samples) = get!(timeinfo.max_time, samples) do
+    times = timeinfo.times
     tmax1 = zero(eltype(times))
     tmax2 = zero(eltype(times))
     tmax3 = zero(eltype(times))
@@ -118,14 +126,16 @@ end
         dt = times[i + samples] - times[i]
         tmax = _max(dt, tmax)
     end
-    return samples / tmax
+    return tmax
 end
+
+@inline get_speed_limit(timeinfo, samples) = samples / get_max_time(timeinfo, samples)
 
 # get_speed_limits(times, samples) = get_speed_limit.(Ref(times), samples)
 
 function plot_line(times, xscale, yscale; kws...)
     xs = Int[]
-    x = length(times) - 1
+    x = length(times.times) - 1
     while x > 0
         insert!(xs, 1, x)
         xnew = floor(Int, x * 0.95)
@@ -145,6 +155,107 @@ function plot_lines(all_times, xscale, yscale, color, name; kws...)
             plot_line(times, xscale, yscale, color=color, label=name; kws...)
         else
             plot_line(times, xscale, yscale, color=color; kws...)
+        end
+    end
+end
+
+struct HullPoint
+    idx::Int
+    val::Float64
+    slope::Float64
+end
+
+function find_convex_hull(times)
+    upper = [HullPoint(1, times[1], 0.0), HullPoint(2, times[2], times[2] - times[1])]
+    lower = [HullPoint(1, times[1], 0.0), HullPoint(2, times[2], times[2] - times[1])]
+    @inbounds for i in 3:length(times)
+        t = times[i]
+        new_slope_upper = (t - upper[end].val) / (i - upper[end].idx)
+        while length(upper) > 1 && new_slope_upper > upper[end].slope
+            pop!(upper)
+            new_slope_upper = (t - upper[end].val) / (i - upper[end].idx)
+        end
+        push!(upper, HullPoint(i, t, new_slope_upper))
+        new_slope_lower = (t - lower[end].val) / (i - lower[end].idx)
+        while length(lower) > 1 && new_slope_lower < lower[end].slope
+            pop!(lower)
+            new_slope_lower = (t - lower[end].val) / (i - lower[end].idx)
+        end
+        push!(lower, HullPoint(i, t, new_slope_lower))
+    end
+    return upper, lower
+end
+
+# Find the max speed at which the convex hulls are still overlapping.
+# Above this speed we are only checking the global properties
+# and not the local properties anymore
+function find_max_speed(times)
+    upper, lower = find_convex_hull(times)
+    # apart from the first and the last point there should be no points with the same index
+    # in the upper and lower hull since each hull point must be a datapoint in the original set
+    # and each point have unique index and can't appear in both hulls.
+    idx_up = 2
+    idx_lo = 2
+    pt_up = upper[2]
+    pt_lo = lower[2]
+    @assert pt_up.slope > pt_lo.slope
+    while true
+        if pt_up.val < pt_lo.val
+            idx_up += 1
+            pt_up = upper[idx_up]
+            if pt_up.slope > pt_lo.slope
+                continue
+            end
+            return 1 / pt_lo.slope
+        else
+            idx_lo += 1
+            pt_lo = lower[idx_lo]
+            if pt_up.slope > pt_lo.slope
+                continue
+            end
+            return 1 / pt_up.slope
+        end
+    end
+end
+
+function find_min_runahead(times, speed)
+    max_output = 1 - speed * times[1]
+    required_runahead = 0.0
+    for i in 2:length(times)
+        output = i - speed * times[i]
+        if output > max_output
+            max_output = output
+        else
+            runahead = max_output - output
+            if runahead > required_runahead
+                required_runahead = runahead
+            end
+        end
+    end
+    return required_runahead
+end
+
+function get_min_runaheads(timeinfo)
+    speed_lb = get_speed_limit(timeinfo, 1)
+    speed_ub = find_max_speed(timeinfo.times)
+    # speed_ub = get_speed_limit(timeinfo, length(timeinfo.times) - 1)
+    speeds = linspace(speed_lb, speed_ub, 201)
+    return speeds, find_min_runahead.(Ref(timeinfo.times), speeds)
+end
+
+function plot_runahead(timeinfo, xscale, yscale; kws...)
+    xs, ys = get_min_runaheads(timeinfo)
+    plot(xs .* xscale, ys .* yscale; kws...)
+end
+
+function plot_runaheads(all_times, xscale, yscale, color, name; kws...)
+    first = true
+    for times in all_times
+        if first
+            first = false
+            plot_runahead(times, xscale, yscale, color=color, label=name; kws...)
+        else
+            plot_runahead(times, xscale, yscale, color=color; kws...)
         end
     end
 end
