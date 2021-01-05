@@ -17,6 +17,9 @@ add_definitions("-\"DNACS_EXPORT_LIB_ds_helper()=\"")
 add_library(datastream-helpers SHARED
   ${datastream_helpers_SRCS})
 target_link_libraries(datastream-helpers PUBLIC ${datastream_helpers_LINKS})
+if(ENABLE_OPENCL)
+  target_link_libraries(datastream-helpers PUBLIC OpenCL::CLHPP)
+endif()
 
 set_target_properties(datastream-helpers PROPERTIES
   COMPILE_FLAGS "-fvisibility=hidden"

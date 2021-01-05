@@ -8,11 +8,19 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}"
 
 include(GNUInstallDirs)
 
+option(ENABLE_OPENCL "Enable OpenCL testing" On)
+
 # Remove rdynamic
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
 
 find_package(PkgConfig REQUIRED)
+if(ENABLE_OPENCL)
+  find_package(CLHPP)
+  if(NOT CLHPP_FOUND)
+    set(ENABLE_OPENCL Off FORCE)
+  endif()
+endif()
 find_package(yaml-cpp REQUIRED)
 pkg_check_modules(DEPS REQUIRED nacs-utils>=10.2)
 
