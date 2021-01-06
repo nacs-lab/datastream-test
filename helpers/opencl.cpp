@@ -152,4 +152,20 @@ NACS_EXPORT() std::vector<cl::Device> all_ocl2_devices(bool includecpu)
     return devices;
 }
 
+NACS_EXPORT() void get_device_ids(const cl::Device &dev, YAML::Node &out)
+{
+    out["platform_name"] = cl::Platform(dev.getInfo<CL_DEVICE_PLATFORM>())
+        .getInfo<CL_PLATFORM_NAME>();
+    out["name"] = dev.getInfo<CL_DEVICE_NAME>();
+    out["vendor"] = dev.getInfo<CL_DEVICE_VENDOR>();
+    out["vendor_id"] = dev.getInfo<CL_DEVICE_VENDOR_ID>();
+}
+
+NACS_EXPORT() YAML::Node get_device_ids(const cl::Device &dev)
+{
+    YAML::Node res(YAML::NodeType::Map);
+    get_device_ids(dev, res);
+    return res;
+}
+
 }

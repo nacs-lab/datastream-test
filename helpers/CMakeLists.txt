@@ -18,7 +18,7 @@ add_definitions("-\"DNACS_EXPORT_LIB_ds_helper()=\"")
 
 add_library(datastream-helpers SHARED
   ${datastream_helpers_SRCS})
-target_link_libraries(datastream-helpers PUBLIC ${datastream_helpers_LINKS})
+target_link_libraries(datastream-helpers PUBLIC ${datastream_helpers_LINKS} ${YAML_CPP_LIBRARIES})
 if(ENABLE_OPENCL)
   target_link_libraries(datastream-helpers PUBLIC OpenCL::CLHPP)
 endif()

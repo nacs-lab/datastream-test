@@ -19,5 +19,4 @@ add_executable(cpu-two-threads-ring-buffer-compute cpu-two-threads-ring-buffer-c
 target_link_libraries(cpu-two-threads-ring-buffer-compute nacs-utils datastream-helpers)
 
 add_executable(cpu-multi-threads-compute cpu-multi-threads-compute.cpp)
-target_link_libraries(cpu-multi-threads-compute nacs-utils datastream-helpers
-  ${YAML_CPP_LIBRARIES})
+target_link_libraries(cpu-multi-threads-compute nacs-utils datastream-helpers)

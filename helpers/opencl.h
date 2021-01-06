@@ -25,6 +25,8 @@
 
 #include <CL/cl2.hpp>
 
+#include <yaml-cpp/yaml.h>
+
 #include <nacs-utils/utils.h>
 
 #include <functional>
@@ -35,6 +37,8 @@ namespace OCL {
 NACS_EXPORT(ds_helper) const char *strerror(int err);
 NACS_EXPORT(ds_helper) bool catch_error(std::function<void()> func);
 NACS_EXPORT(ds_helper) std::vector<cl::Device> all_ocl2_devices(bool includecpu=true);
+NACS_EXPORT(ds_helper) void get_device_ids(const cl::Device &dev, YAML::Node &out);
+NACS_EXPORT(ds_helper) YAML::Node get_device_ids(const cl::Device &dev);
 
 }
 
