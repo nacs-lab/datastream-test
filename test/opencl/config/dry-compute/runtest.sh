@@ -10,5 +10,5 @@ for conf in "$confdir"/*.yaml; do
     name=${conf%.yaml}
     name=${name##*/}
     echo -n "Running: $name "
-    "$testprog" "$conf" "${outdir}/${name}".yaml
+    "$testprog" "$conf" | tee "${outdir}/${name}".yaml
 done
