@@ -2,11 +2,13 @@
 
 set(datastream_helpers_HDRS
   cpu_kernel.h
+  opencl.h
   test.h
   threads.h
   )
 set(datastream_helpers_SRCS
   cpu_kernel.cpp
+  opencl.cpp
   test.cpp
   threads.cpp
   )
