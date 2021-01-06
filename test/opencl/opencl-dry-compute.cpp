@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nele)
+static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nele, int ncalc)
 {
     cl::Context ctx({dev});
     cl::CommandQueue queue(ctx, dev, ooo ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : 0);
@@ -36,14 +36,16 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
         {
         }
 
-        kernel void compute(global float *res, float amp, float freq)
+        kernel void compute(global float *res, float amp, float freq, int ncalc)
         {
             // The performance of sine function may depend on the input value.
             // We make sure the range is small in the real code and we should do that here
             // as well to make the performance more realistic.
-            float val = amp * sin(freq * (get_global_id(0) % 512));
-            if (val > 2) {
-                // We pass in an `amp < 2` so this will never happen
+            float val = get_global_id(0) % 512;
+            for (int i = 0; i < ncalc; i++)
+                val = amp * sin(freq * val);
+            if (val > 1024) {
+                // We pass in an `amp < 1024` so this will never happen
                 // and we'll not be affected by any memory access bandwidth.
                 // However, the compiler doesn't know about this
                 // and will still run the function.
@@ -51,14 +53,12 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
             }
         }
 
-        kernel void compute_native(global float *res, float amp, float freq)
+        kernel void compute_native(global float *res, float amp, float freq, int ncalc)
         {
-            float val = amp * native_sin(freq * (get_global_id(0) % 512));
-            if (val > 2) {
-                // We pass in an `amp < 2` so this will never happen
-                // and we'll not be affected by any memory access bandwidth.
-                // However, the compiler doesn't know about this
-                // and will still run the function.
+            float val = get_global_id(0) % 512;
+            for (int i = 0; i < ncalc; i++)
+                val = amp * native_sin(freq * val);
+            if (val > 1024) {
                 res[get_global_id(0)] = val;
             }
         }
@@ -93,8 +93,9 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
         // Warm up
         cl::Kernel kernel(prog, "compute");
         kernel.setArg(0, nullptr);
-        kernel.setArg(1, 0.2f);
-        kernel.setArg(2, 0.002f);
+        kernel.setArg(1, 512.0f);
+        kernel.setArg(2, 0.8f / 256);
+        kernel.setArg(3, ncalc);
         cl::Event evt;
         queue.enqueueNDRangeKernel(kernel, cl::NDRange(), cl::NDRange(nele),
                                    cl::NDRange(), nullptr, &evt);
@@ -105,8 +106,9 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
     for (size_t i = 0; i < nrep; i++) {
         cl::Kernel kernel(prog, "compute");
         kernel.setArg(0, nullptr);
-        kernel.setArg(1, 0.2f);
-        kernel.setArg(2, 0.002f);
+        kernel.setArg(1, 512.0f);
+        kernel.setArg(2, 0.8f / 256);
+        kernel.setArg(3, ncalc);
         queue.enqueueNDRangeKernel(kernel, cl::NDRange(), cl::NDRange(nele),
                                    cl::NDRange(), nullptr, &evts[i]);
     }
@@ -121,8 +123,9 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
         // Warm up
         cl::Kernel kernel(prog, "compute_native");
         kernel.setArg(0, nullptr);
-        kernel.setArg(1, 0.2f);
-        kernel.setArg(2, 0.002f);
+        kernel.setArg(1, 512.0f);
+        kernel.setArg(2, 0.8f / 256);
+        kernel.setArg(3, ncalc);
         cl::Event evt;
         queue.enqueueNDRangeKernel(kernel, cl::NDRange(), cl::NDRange(nele),
                                    cl::NDRange(), nullptr, &evt);
@@ -133,8 +136,9 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
     for (size_t i = 0; i < nrep; i++) {
         cl::Kernel kernel(prog, "compute_native");
         kernel.setArg(0, nullptr);
-        kernel.setArg(1, 0.2f);
-        kernel.setArg(2, 0.002f);
+        kernel.setArg(1, 512.0f);
+        kernel.setArg(2, 0.8f / 256);
+        kernel.setArg(3, ncalc);
         queue.enqueueNDRangeKernel(kernel, cl::NDRange(), cl::NDRange(nele),
                                    cl::NDRange(), nullptr, &evts[i]);
     }
@@ -151,6 +155,7 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
     res["ooo"] = ooo;
     res["nrep"] = nrep;
     res["nele"] = nele;
+    res["ncalc"] = ncalc;
     return res;
 }
 
@@ -159,6 +164,7 @@ struct Config {
     bool ooo;
     size_t nrep;
     size_t nele;
+    int ncalc = 1;
     static Config loadYAML(const char *fname)
     {
         Config conf;
@@ -171,6 +177,8 @@ struct Config {
         conf.ooo = required_key("ooo").as<bool>();
         conf.nrep = required_key("nrep").as<size_t>();
         conf.nele = required_key("nele").as<size_t>();
+        if (auto node = file["ncalc"])
+            conf.ncalc = node.as<int>();
         conf.dev_filter = file["devices"];
         return conf;
     }
@@ -190,7 +198,7 @@ int main(int argc, char **argv)
     std::vector<YAML::Node> res;
     for (auto &dev: devices) {
         OCL::catch_error([&] {
-            res.push_back(test_device(dev, config.ooo, config.nrep, config.nele));
+            res.push_back(test_device(dev, config.ooo, config.nrep, config.nele, config.ncalc));
         });
     }
     YAML::Emitter out;
