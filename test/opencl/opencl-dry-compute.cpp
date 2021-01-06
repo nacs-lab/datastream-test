@@ -38,7 +38,22 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
 
         kernel void compute(global float *res, float amp, float freq)
         {
-            float val = amp * sin(freq * get_global_id(0));
+            // The performance of sine function may depend on the input value.
+            // We make sure the range is small in the real code and we should do that here
+            // as well to make the performance more realistic.
+            float val = amp * sin(freq * (get_global_id(0) % 512));
+            if (val > 2) {
+                // We pass in an `amp < 2` so this will never happen
+                // and we'll not be affected by any memory access bandwidth.
+                // However, the compiler doesn't know about this
+                // and will still run the function.
+                res[get_global_id(0)] = val;
+            }
+        }
+
+        kernel void compute_native(global float *res, float amp, float freq)
+        {
+            float val = amp * native_sin(freq * (get_global_id(0) % 512));
             if (val > 2) {
                 // We pass in an `amp < 2` so this will never happen
                 // and we'll not be affected by any memory access bandwidth.
@@ -101,9 +116,38 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
         evt.wait();
     }
     auto t1 = (double)timer.elapsed() / double(nele) / double(nrep);
+
+    {
+        // Warm up
+        cl::Kernel kernel(prog, "compute_native");
+        kernel.setArg(0, nullptr);
+        kernel.setArg(1, 0.2f);
+        kernel.setArg(2, 0.002f);
+        cl::Event evt;
+        queue.enqueueNDRangeKernel(kernel, cl::NDRange(), cl::NDRange(nele),
+                                   cl::NDRange(), nullptr, &evt);
+        evt.wait();
+    }
+
+    timer.restart();
+    for (size_t i = 0; i < nrep; i++) {
+        cl::Kernel kernel(prog, "compute_native");
+        kernel.setArg(0, nullptr);
+        kernel.setArg(1, 0.2f);
+        kernel.setArg(2, 0.002f);
+        queue.enqueueNDRangeKernel(kernel, cl::NDRange(), cl::NDRange(nele),
+                                   cl::NDRange(), nullptr, &evts[i]);
+    }
+    {
+        cl::Event evt;
+        queue.enqueueMarkerWithWaitList(&evts, &evt);
+        evt.wait();
+    }
+    auto t2 = (double)timer.elapsed() / double(nele) / double(nrep);
     auto res = OCL::get_device_ids(dev);
     res["tdummy"] = t0;
     res["tcompute"] = t1;
+    res["tcompute_native"] = t2;
     res["ooo"] = ooo;
     res["nrep"] = nrep;
     res["nele"] = nele;
