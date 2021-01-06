@@ -152,6 +152,76 @@ NACS_EXPORT() std::vector<cl::Device> all_ocl2_devices(bool includecpu)
     return devices;
 }
 
+static bool check_device(const cl::Device &dev, const YAML::Node &filter)
+{
+    if (!filter)
+        return true;
+    if (filter.IsSequence()) {
+        for (const auto &node: filter) {
+            if (check_device(dev, node)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    if (auto node = filter["cpu"]) {
+        if (!node.as<bool>() && dev.getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU) {
+            return false;
+        }
+    }
+    if (auto node = filter["gpu"]) {
+        if (!node.as<bool>() && dev.getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_GPU) {
+            return false;
+        }
+    }
+    if (auto node = filter["platform_name"]) {
+        auto platform = cl::Platform(dev.getInfo<CL_DEVICE_PLATFORM>())
+            .getInfo<CL_PLATFORM_NAME>();
+        if (node.as<std::string>() != platform) {
+            return false;
+        }
+    }
+    if (auto node = filter["name"]) {
+        if (node.as<std::string>() != dev.getInfo<CL_DEVICE_NAME>()) {
+            return false;
+        }
+    }
+    if (auto node = filter["vendor"]) {
+        if (node.as<std::string>() != dev.getInfo<CL_DEVICE_VENDOR>()) {
+            return false;
+        }
+    }
+    if (auto node = filter["vendor_id"]) {
+        if (node.as<uint32_t>() != dev.getInfo<CL_DEVICE_VENDOR_ID>()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+NACS_EXPORT(ds_helper) std::vector<cl::Device> all_ocl2_devices(const YAML::Node *filter)
+{
+    std::vector<cl::Platform> platforms;
+    cl::Platform::get(&platforms);
+    std::vector<cl::Device> devices;
+    std::smatch match;
+    for (auto &p: platforms) {
+        std::vector<cl::Device> devs;
+        p.getDevices(CL_DEVICE_TYPE_ALL, &devs);
+        for (auto &dev: devs) {
+            auto ver = dev.getInfo<CL_DEVICE_VERSION>();
+            if (std::regex_search(ver, match, oclver_regex)) {
+                if (std::stoi(match[1].str()) < 2)
+                    continue;
+                if (filter && !check_device(dev, *filter))
+                    continue;
+                devices.push_back(dev);
+            }
+        }
+    }
+    return devices;
+}
+
 NACS_EXPORT() void get_device_ids(const cl::Device &dev, YAML::Node &out)
 {
     out["platform_name"] = cl::Platform(dev.getInfo<CL_DEVICE_PLATFORM>())
@@ -159,6 +229,23 @@ NACS_EXPORT() void get_device_ids(const cl::Device &dev, YAML::Node &out)
     out["name"] = dev.getInfo<CL_DEVICE_NAME>();
     out["vendor"] = dev.getInfo<CL_DEVICE_VENDOR>();
     out["vendor_id"] = dev.getInfo<CL_DEVICE_VENDOR_ID>();
+    switch (dev.getInfo<CL_DEVICE_TYPE>()) {
+    case CL_DEVICE_TYPE_CPU:
+        out["type"] = "cpu";
+        break;
+    case CL_DEVICE_TYPE_GPU:
+        out["type"] = "gpu";
+        break;
+    case CL_DEVICE_TYPE_ACCELERATOR:
+        out["type"] = "accelerator";
+        break;
+    case CL_DEVICE_TYPE_CUSTOM:
+        out["type"] = "custom";
+        break;
+    default:
+        out["type"] = "unknown";
+        break;
+    }
 }
 
 NACS_EXPORT() YAML::Node get_device_ids(const cl::Device &dev)

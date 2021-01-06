@@ -110,16 +110,43 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
     return res;
 }
 
-int main(void)
+struct Config {
+    YAML::Node dev_filter;
+    bool ooo;
+    size_t nrep;
+    size_t nele;
+    static Config loadYAML(const char *fname)
+    {
+        Config conf;
+        auto file = YAML::LoadFile(fname);
+        auto required_key = [&] (auto name) {
+            if (auto node = file[name])
+                return node;
+            throw std::runtime_error(std::string("Required key '") + name + "' missing.");
+        };
+        conf.ooo = required_key("ooo").as<bool>();
+        conf.nrep = required_key("nrep").as<size_t>();
+        conf.nele = required_key("nele").as<size_t>();
+        conf.dev_filter = file["devices"];
+        return conf;
+    }
+};
+
+int main(int argc, char **argv)
 {
-    std::vector<cl::Device> devices = OCL::all_ocl2_devices();
+    if (argc < 2) {
+        fprintf(stderr, "Needs at least one argument\n");
+        exit(1);
+    }
+    auto config = Config::loadYAML(argv[1]);
+    std::vector<cl::Device> devices = OCL::all_ocl2_devices(&config.dev_filter);
     if (devices.empty())
-        throw std::runtime_error("Unable to find OpenCL 2.0 devices");
+        throw std::runtime_error("Unable to find OpenCL devices");
 
     std::vector<YAML::Node> res;
     for (auto &dev: devices) {
         OCL::catch_error([&] {
-            res.push_back(test_device(dev, false, 1024, 1024 * 1024));
+            res.push_back(test_device(dev, config.ooo, config.nrep, config.nele));
         });
     }
     YAML::Emitter out;
