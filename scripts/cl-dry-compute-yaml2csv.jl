@@ -48,7 +48,12 @@ collect_results(ARGS[1], all_res)
 const prefix = ARGS[2]
 
 for (dev, dev_res) in all_res
-    open("$(prefix)-$(dev).csv", "w") do io
+    if endswith(prefix, "/")
+        name = "$(prefix)$(dev).csv"
+    else
+        name = "$(prefix)-$(dev).csv"
+    end
+    open(name, "w") do io
         println(io, "Size,Eval per Kernel,Repeat,Out of order," *
                 "Dummy Time (ns),Compute Time (ns),Native Compute Time (ns)")
         sort!(dev_res, by=x->(x.nele, x.ncalc, x.nrep, x.ooo))
