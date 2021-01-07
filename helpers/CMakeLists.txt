@@ -2,16 +2,24 @@
 
 set(datastream_helpers_HDRS
   cpu_kernel.h
-  opencl.h
   test.h
   threads.h
   )
 set(datastream_helpers_SRCS
   cpu_kernel.cpp
-  opencl.cpp
   test.cpp
   threads.cpp
   )
+if(ENABLE_OPENCL)
+  set(datastream_helpers_HDRS
+    ${datastream_helpers_HDRS}
+    opencl.h
+    )
+  set(datastream_helpers_SRCS
+    ${datastream_helpers_SRCS}
+    opencl.cpp
+    )
+endif()
 set(datastream_helpers_LINKS ${DEPS_LIBRARIES})
 
 add_definitions("-\"DNACS_EXPORT_LIB_ds_helper()=\"")
