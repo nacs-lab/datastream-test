@@ -59,12 +59,12 @@ static YAML::Node test_device(cl::Device &dev, double start, double step, unsign
     std::string source{R"CLC(
         kernel void compute_sin(global float *res, double start, double step)
         {
-            res[get_global_id(0)] = sin(start + get_global_id(0) * step);
+            res[get_global_id(0)] = sin((float)(start + get_global_id(0) * step));
         }
 
         kernel void compute_sin_native(global float *res, double start, double step)
         {
-            res[get_global_id(0)] = native_sin(start + get_global_id(0) * step);
+            res[get_global_id(0)] = native_sin((float)(start + get_global_id(0) * step));
         }
     )CLC"};
     cl::Program prog(ctx, {source}, true);
