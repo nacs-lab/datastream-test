@@ -49,10 +49,11 @@ const prefix = ARGS[2]
 
 for (dev, dev_res) in all_res
     open("$(prefix)-$(dev).csv", "w") do io
-        println(io, "Out of order,Repeat,Size,Eval per Kernel," *
+        println(io, "Size,Eval per Kernel,Repeat,Out of order," *
                 "Dummy Time (ns),Compute Time (ns),Native Compute Time (ns)")
+        sort!(dev_res, by=x->(x.nele, x.ncalc, x.nrep, x.ooo))
         for res in dev_res
-            println(io, "$(res.ooo),$(res.nrep),$(res.nele),$(res.ncalc)," *
+            println(io, "$(res.nele),$(res.ncalc),$(res.nrep),$(res.ooo)," *
                     "$(res.tdummy),$(res.tcompute),$(res.tcompute_native)")
         end
     end
