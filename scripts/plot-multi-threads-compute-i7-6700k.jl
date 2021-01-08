@@ -3,7 +3,7 @@
 include("plot-multi-threads-compute.jl")
 include("props_i7-6700k.jl")
 
-const datadir = joinpath(@__DIR__, "../data/multi-threads-compute/i7-6700k")
+const datadir = joinpath(@__DIR__, "../data/cpu-multi-threads-compute/i7-6700k")
 
 const data = load_all_times(datadir, nominal_ghz)
 
