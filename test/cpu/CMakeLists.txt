@@ -20,3 +20,7 @@ target_link_libraries(cpu-two-threads-ring-buffer-compute nacs-utils datastream-
 
 add_executable(cpu-multi-threads-compute cpu-multi-threads-compute.cpp)
 target_link_libraries(cpu-multi-threads-compute nacs-utils datastream-helpers)
+
+add_executable(cpu-compute-accuracy cpu-compute-accuracy.cpp)
+target_link_libraries(cpu-compute-accuracy nacs-utils datastream-helpers -fopenmp)
+target_compile_options(cpu-compute-accuracy PRIVATE -fopenmp -ffast-math)
