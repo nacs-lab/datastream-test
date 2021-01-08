@@ -1522,7 +1522,7 @@ void Kernel::sin_range(float *out, double start, double step, unsigned nsteps)
 {
     int32_t inc_buff[] = {0, 1, 2, 3, 4, 5, 6, 7};
     __m256i inc = _mm256_loadu_si256((const __m256i*)&inc_buff);
-    for (unsigned i = 0; i < nsteps; i += 8) {
+    for (unsigned i = 0; i < nsteps; i += 16) {
         auto phase_lo = _mm512_cvtpd_ps(
             start + _mm512_cvtepi32_pd(_mm256_add_epi32(inc, _mm256_set1_epi32(i))) * step);
         auto phase_hi = _mm512_cvtpd_ps(
