@@ -3,13 +3,13 @@
 include("plot-ring-bandwidth-cpu-csv.jl")
 include("props_i9-7900x.jl")
 
-const datadir = joinpath(@__DIR__, "../data/")
+const datadir = joinpath(@__DIR__, "../data/cpu-ring-bandwidth-cpu/i9-7900x")
 
-data_block = load_data(joinpath(datadir, "ring-bandwidth-cpu-i9-7900x_blockring_read.csv"),
-                       joinpath(datadir, "ring-bandwidth-cpu-i9-7900x_blockring_write.csv"))
+data_block = load_data(joinpath(datadir, "blockring_read.csv"),
+                       joinpath(datadir, "blockring_write.csv"))
 
-data_pipe = load_data(joinpath(datadir, "ring-bandwidth-cpu-i9-7900x_datapipe_read.csv"),
-                      joinpath(datadir, "ring-bandwidth-cpu-i9-7900x_datapipe_write.csv"))
+data_pipe = load_data(joinpath(datadir, "datapipe_read.csv"),
+                      joinpath(datadir, "datapipe_write.csv"))
 
 const prefix = joinpath(@__DIR__, "../imgs/ring-bandwidth-cpu-i9-7900x")
 
