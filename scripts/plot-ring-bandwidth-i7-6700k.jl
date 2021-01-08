@@ -3,21 +3,21 @@
 include("plot-ring-bandwidth-csv.jl")
 include("props_i7-6700k.jl")
 
-const datadir = joinpath(@__DIR__, "../data/")
+const datadir = joinpath(@__DIR__, "../data/cpu-ring-bandwidth/i7-6700k")
 
-data_block = load_data(joinpath(datadir, "ring-bandwidth-i7-6700k_blockring_read.csv"),
-                       joinpath(datadir, "ring-bandwidth-i7-6700k_blockring_write.csv"))
+data_block = load_data(joinpath(datadir, "blockring_read.csv"),
+                       joinpath(datadir, "blockring_write.csv"))
 data_block_empty = load_data(joinpath(datadir,
-                                      "ring-bandwidth-empty-i7-6700k_blockring_read.csv"),
+                                      "empty-blockring_read.csv"),
                              joinpath(datadir,
-                                      "ring-bandwidth-empty-i7-6700k_blockring_write.csv"))
+                                      "empty-blockring_write.csv"))
 
-data_pipe = load_data(joinpath(datadir, "ring-bandwidth-i7-6700k_datapipe_read.csv"),
-                      joinpath(datadir, "ring-bandwidth-i7-6700k_datapipe_write.csv"))
+data_pipe = load_data(joinpath(datadir, "datapipe_read.csv"),
+                      joinpath(datadir, "datapipe_write.csv"))
 data_pipe_empty = load_data(joinpath(datadir,
-                                     "ring-bandwidth-empty-i7-6700k_datapipe_read.csv"),
+                                     "empty-datapipe_read.csv"),
                             joinpath(datadir,
-                                     "ring-bandwidth-empty-i7-6700k_datapipe_write.csv"))
+                                     "empty-datapipe_write.csv"))
 
 const prefix = joinpath(@__DIR__, "../imgs/ring-bandwidth-i7-6700k")
 
