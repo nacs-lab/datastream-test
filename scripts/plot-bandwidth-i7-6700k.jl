@@ -3,11 +3,11 @@
 include("plot-bandwidth-csv.jl")
 include("props_i7-6700k.jl")
 
-const datadir = joinpath(@__DIR__, "../data/")
+const datadir = joinpath(@__DIR__, "../data/cpu-write-bandwidth/i7-6700k")
 
-data_normal = load_data(joinpath(datadir, "write-bandwidth-i7-6700k.csv"));
-data_nt = load_data(joinpath(datadir, "write-bandwidth-nt-i7-6700k.csv"));
-data_no_prefetch = load_data(joinpath(datadir, "write-bandwidth-no-prefetch-i7-6700k.csv"));
+data_normal = load_data(joinpath(datadir, "normal.csv"));
+data_nt = load_data(joinpath(datadir, "nt.csv"));
+data_no_prefetch = load_data(joinpath(datadir, "no-prefetch.csv"));
 
 const prefix = joinpath(@__DIR__, "../imgs/bandwidth-i7-6700k")
 
