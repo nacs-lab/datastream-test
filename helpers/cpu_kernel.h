@@ -33,6 +33,8 @@ namespace scalar {
 
 struct Kernel {
     NACS_EXPORT(ds_helper) static
+    void sin_range(float *out, double start, double step, unsigned nsteps);
+    NACS_EXPORT(ds_helper) static
     void calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static
     void calc_fill(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp);
@@ -74,6 +76,8 @@ struct Kernel {
 namespace asimd {
 
 struct Kernel {
+    NACS_EXPORT(ds_helper) static
+    void sin_range(float *out, double start, double step, unsigned nsteps);
     NACS_EXPORT(ds_helper) static
     void calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static
@@ -118,6 +122,8 @@ namespace sse2 {
 
 struct Kernel {
     NACS_EXPORT(ds_helper) static
+    void sin_range(float *out, double start, double step, unsigned nsteps);
+    NACS_EXPORT(ds_helper) static
     void calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static
     void calc_fill(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp);
@@ -157,6 +163,8 @@ struct Kernel {
 namespace avx {
 
 struct Kernel {
+    NACS_EXPORT(ds_helper) static
+    void sin_range(float *out, double start, double step, unsigned nsteps);
     NACS_EXPORT(ds_helper) static
     void calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static
@@ -198,6 +206,8 @@ namespace avx2 {
 
 struct Kernel {
     NACS_EXPORT(ds_helper) static
+    void sin_range(float *out, double start, double step, unsigned nsteps);
+    NACS_EXPORT(ds_helper) static
     void calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static
     void calc_fill(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp);
@@ -237,6 +247,8 @@ struct Kernel {
 namespace avx512 {
 
 struct Kernel {
+    NACS_EXPORT(ds_helper) static
+    void sin_range(float *out, double start, double step, unsigned nsteps);
     NACS_EXPORT(ds_helper) static
     void calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp);
     NACS_EXPORT(ds_helper) static

@@ -89,6 +89,14 @@ static NACS_INLINE float sinpif_pi(float d)
 }
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sin_range(float *out, double start, double step, unsigned nsteps)
+{
+    for (unsigned i = 0; i < nsteps; i++) {
+        out[i] = sinpif_pi(float(start + step * i));
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
 void Kernel::calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp)
 {
     asm volatile ("" : "+r"(nrep) :: "memory");
@@ -315,6 +323,17 @@ static NACS_INLINE float32x4_t sinpif_pi(float32x4_t d)
     auto u = -0.17818783f * s + 0.8098674f;
     u = u * s - 1.6448531f;
     return (s * d) * u + d;
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sin_range(float *out, double start, double step, unsigned nsteps)
+{
+    uint64x2_t inc{0, 1};
+    for (unsigned i = 0; i < nsteps; i += 4) {
+        auto phase_lo = vcvt_f32_f64(start + vcvtq_f64_u64(inc + i) * step);
+        auto phase = vcvt_high_f32_f64(phase_lo, start + vcvtq_f64_u64(inc + i + 2) * step);
+        vst1q_f32(&out[i], sinpif_pi(phase));
+    }
 }
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
@@ -584,6 +603,21 @@ __m128 sinpif_pi(__m128 d)
     auto u = -0.17818783f * s + 0.8098674f;
     u = u * s - 1.6448531f;
     return (s * d) * u + d;
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::sin_range(float *out, double start, double step, unsigned nsteps)
+{
+    int32_t inc_buff[] = {0, 1, 0, 1};
+    __m128i inc = _mm_loadu_si128((const __m128i*)&inc_buff);
+    for (unsigned i = 0; i < nsteps; i += 4) {
+        auto phase_lo = _mm_cvtpd_ps(start + _mm_cvtepi32_pd(
+                                         _mm_add_epi32(inc, _mm_set1_epi32(i))) * step);
+        auto phase_hi = _mm_cvtpd_ps(start + _mm_cvtepi32_pd(
+                                         _mm_add_epi32(inc, _mm_set1_epi32(i + 2))) * step);
+        auto phase = _mm_shuffle_ps(phase_lo, phase_hi, 0x44);
+        _mm_store_ps(&out[i], sinpif_pi(phase));
+    }
 }
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
@@ -878,6 +912,21 @@ __m256 sinpif_pi(__m256 d)
 }
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::sin_range(float *out, double start, double step, unsigned nsteps)
+{
+    int32_t inc_buff[] = {0, 1, 2, 3};
+    __m128i inc = _mm_loadu_si128((const __m128i*)&inc_buff);
+    for (unsigned i = 0; i < nsteps; i += 8) {
+        auto phase_lo = _mm256_cvtpd_ps(
+            start + _mm256_cvtepi32_pd(_mm_add_epi32(inc, _mm_set1_epi32(i))) * step);
+        auto phase_hi = _mm256_cvtpd_ps(
+            start + _mm256_cvtepi32_pd(_mm_add_epi32(inc, _mm_set1_epi32(i + 4))) * step);
+        auto phase = _mm256_insertf128_ps(_mm256_castps128_ps256(phase_lo), phase_hi, 1);
+        _mm256_store_ps(&out[i], sinpif_pi(phase));
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
 void Kernel::calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp)
 {
     ncalc = ncalc / 8;
@@ -1166,6 +1215,21 @@ __m256 sinpif_pi(__m256 d)
 }
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::sin_range(float *out, double start, double step, unsigned nsteps)
+{
+    int32_t inc_buff[] = {0, 1, 2, 3};
+    __m128i inc = _mm_loadu_si128((const __m128i*)&inc_buff);
+    for (unsigned i = 0; i < nsteps; i += 8) {
+        auto phase_lo = _mm256_cvtpd_ps(
+            start + _mm256_cvtepi32_pd(_mm_add_epi32(inc, _mm_set1_epi32(i))) * step);
+        auto phase_hi = _mm256_cvtpd_ps(
+            start + _mm256_cvtepi32_pd(_mm_add_epi32(inc, _mm_set1_epi32(i + 4))) * step);
+        auto phase = _mm256_insertf128_ps(_mm256_castps128_ps256(phase_lo), phase_hi, 1);
+        _mm256_store_ps(&out[i], sinpif_pi(phase));
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
 void Kernel::calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp)
 {
     ncalc = ncalc / 8;
@@ -1451,6 +1515,21 @@ __m512 sinpif_pi(__m512 d)
     auto u = -0.17818783f * s + 0.8098674f;
     u = u * s - 1.6448531f;
     return (s * d) * u + d;
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::sin_range(float *out, double start, double step, unsigned nsteps)
+{
+    int32_t inc_buff[] = {0, 1, 2, 3, 4, 5, 6, 7};
+    __m256i inc = _mm256_loadu_si256((const __m256i*)&inc_buff);
+    for (unsigned i = 0; i < nsteps; i += 8) {
+        auto phase_lo = _mm512_cvtpd_ps(
+            start + _mm512_cvtepi32_pd(_mm256_add_epi32(inc, _mm256_set1_epi32(i))) * step);
+        auto phase_hi = _mm512_cvtpd_ps(
+            start + _mm512_cvtepi32_pd(_mm256_add_epi32(inc, _mm256_set1_epi32(i + 8))) * step);
+        auto phase = _mm512_insertf32x8(_mm512_castps256_ps512(phase_lo), phase_hi, 1);
+        _mm512_store_ps(&out[i], sinpif_pi(phase));
+    }
 }
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
