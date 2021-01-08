@@ -3,10 +3,10 @@
 include("plot-ring-bandwidth-compute-csv.jl")
 include("props_i7-6700k.jl")
 
-const datadir = joinpath(@__DIR__, "../data/")
+const datadir = joinpath(@__DIR__, "../data/cpu-ring-bandwidth-compute/i7-6700k")
 
-data_block = load_data(joinpath(datadir, "ring-bandwidth-compute-i7-6700k_read.csv"),
-                       joinpath(datadir, "ring-bandwidth-compute-i7-6700k_write.csv"))
+data_block = load_data(joinpath(datadir, "read.csv"),
+                       joinpath(datadir, "write.csv"))
 
 const prefix = joinpath(@__DIR__, "../imgs/ring-bandwidth-compute-i7-6700k")
 
