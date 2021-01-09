@@ -92,6 +92,7 @@ function plot_dummy(data, ooo)
     xticks(2.0.^(nele_lo:3:nele_hi), size_to_str.(2.0.^(nele_lo:3:nele_hi)))
     ax.set_xticks(2.0.^(nele_lo:nele_hi), minor=true)
     ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    ax.tick_params(axis="y", right=true, which="minor", direction="in")
 
     t_lo = floor(Int, log10(minimum(data.tdummy)) + 0.25) - 9
     t_hi = ceil(Int, log10(maximum(data.tdummy)) - 0.25) - 9
@@ -143,6 +144,7 @@ function plot_compute(data, ooo, native)
     xticks(2.0.^(n_lo:2:n_hi), size_to_str.(2.0.^(n_lo:2:n_hi)))
     ax.set_xticks(2.0.^(n_lo:n_hi), minor=true)
     ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    ax.tick_params(axis="y", right=true, which="minor", direction="in")
 
     t_lo = floor(Int, log10(ymin) + 0.25) - 9
     t_hi = ceil(Int, log10(ymax) - 0.25) - 9
