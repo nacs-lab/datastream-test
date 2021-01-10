@@ -1,0 +1,5 @@
+devices:
+  - cpu: false
+nele: 262144
+nrep: 128
+nwrite: 4
