@@ -1,5 +1,8 @@
 #!/usr/bin/julia
 
+using NaCsCalc
+using NaCsData
+using NaCsData.Fitting: fit_data
 using NaCsPlot
 using PyPlot
 using DelimitedFiles
@@ -45,7 +48,7 @@ const max_bandwidths = Dict("amd-gpu-gfx1012"=>224e9,
                             "intel-gpu-1912"=>34.1e9,
                             "intel-gpu-9bc4"=>45.8e9)
 
-function plot_dummy(data, max_bw)
+function plot_nrep(data, max_bw)
     neles = 2 .^ (10:23)
     cnt_mid = 0
     cnt_big = 0
@@ -79,7 +82,6 @@ function plot_dummy(data, max_bw)
     ylabel("Memory Throughput (B/s)")
     legend(fontsize="xx-small", ncol=6, columnspacing=0.8, handlelength=1,
            loc="lower center")
-    # title(ooo ? "Out of Order dummy" : "In Order dummy")
 
     ax = gca()
 
@@ -97,7 +99,7 @@ function plot_dummy(data, max_bw)
     ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
 end
 
-function plot_compute(data, max_bw)
+function plot_nwrite(data, max_bw)
     neles = 2 .^ (10:23)
     cnt_mid = 0
     cnt_big = 0
@@ -130,7 +132,6 @@ function plot_compute(data, max_bw)
     ylabel("Memory Throughput (B/s)")
     legend(fontsize="xx-small", ncol=6, columnspacing=0.8, handlelength=1,
            loc="lower center")
-    # title((ooo ? "Out of Order " : "In Order ") * (native ? "native_sin" : "sin"))
 
     ax = gca()
 
@@ -154,13 +155,78 @@ for dev in devices
     d = data[dev]
 
     ax = subplot(1, 2, 1)
-    plot_dummy(d, max_bandwidths[dev])
+    plot_nrep(d, max_bandwidths[dev])
 
     ax = subplot(1, 2, 2)
-    plot_compute(d, max_bandwidths[dev])
+    plot_nwrite(d, max_bandwidths[dev])
 
     tight_layout(pad=0.6)
     NaCsPlot.maybe_save("$(prefix)_$(dev)")
 end
+
+function fit_nrep(data)
+    neles = 2 .^ (19:23)
+    cnt_big = 0
+    xmin = Inf
+    xmax = 0.0
+    ymin = Inf
+    ymax = 0.0
+    data = filter_data(x->(any((nele - 2 <= x.nele <= nele + 2 for nele in neles))), data)
+
+    function real_model(nrep, buf_sz, p)
+        max_bw, init_time, run_time = p
+        perrun_time = init_time / nrep + run_time + buf_sz / max_bw
+        return buf_sz / perrun_time
+    end
+
+    scalar_model(i, p) = real_model(data.nrep[i], data.nele[i] * 4, p)
+    model(i, p) = scalar_model.(i, Ref(p))
+
+    fit = fit_data(model, 1:length(data.t), 4e9 ./ data.t, [200e9, 3e-3, 0]; plotx=false)
+    @show fit.uncs
+
+    for nele in neles
+        line = filter_data(x->nele - 2 <= x.nele <= nele + 2, data)
+        color = "C$(cnt_big)"
+        cnt_big += 1
+        perm = sortperm(line.nrep)
+        x = line.nrep[perm]
+        y = 4e9 ./ line.t[perm]
+        xmin = min(xmin, x[1])
+        xmax = max(xmax, x[end])
+        ymin = min(ymin, minimum(y))
+        ymax = max(ymax, maximum(y))
+        plot(x, y, "o", color=color, label="$(size_to_str(nele * 4))")
+        plotx = linspace(x[1] * 0.9, x[end] * 1.1, 10000)
+        plot(plotx, real_model.(plotx, nele * 4, Ref(fit.param)), color=color)
+    end
+    xscale("log")
+    yscale("log")
+    grid()
+    xlabel("Repetition")
+    ylabel("Memory Throughput (B/s)")
+    legend(fontsize="xx-small", ncol=6, columnspacing=0.8, handlelength=1,
+           loc="lower center")
+
+    ax = gca()
+
+    x_lo = floor(Int, log2(xmin) + 0.25)
+    x_hi = ceil(Int, log2(xmax) - 0.25)
+    xticks(2.0.^(x_lo:x_hi), size_to_str.(2.0.^(x_lo:x_hi)))
+    ax.set_xticks(2.0.^(x_lo:x_hi), minor=true)
+    ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+
+    y_lo = floor(Int, log2(ymin) + 0.25)
+    y_hi = ceil(Int, log2(ymax) - 0.25)
+    yticks(2.0.^(y_lo:2:y_hi), size_to_str.(2.0.^(y_lo:2:y_hi)))
+    ax.set_yticks(2.0.^(y_lo:y_hi), minor=true)
+    ax.tick_params(axis="y", right=true, which="minor", direction="in")
+    ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+end
+
+figure()
+fit_nrep(data["amd-gpu-gfx1012"])
+tight_layout(pad=0.6)
+NaCsPlot.maybe_save("$(prefix)_amd-gpu-gfx1012-large_buff")
 
 NaCsPlot.maybe_show()
