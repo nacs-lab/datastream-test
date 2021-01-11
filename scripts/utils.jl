@@ -1,34 +1,42 @@
 #!/usr/bin/julia
 
-function size_to_str(size)
+function size_to_str(size, unit="")
     size = Int(size)
     str(num) = isinteger(num) ? string(Int(num)) : string(num)
+    if isempty(unit)
+        _unit = ""
+    else
+        _unit = "i$unit"
+    end
     if size < 1024
-        return str(size)
+        if isempty(unit)
+            return str(size)
+        end
+        return "$(str(size)) $unit"
     else
         size /= 1024
     end
     if size < 1024
-        return "$(str(size)) k"
+        return "$(str(size)) k$_unit"
     else
         size /= 1024
     end
     if size < 1024
-        return "$(str(size)) M"
+        return "$(str(size)) M$_unit"
     else
         size /= 1024
     end
     if size < 1024
-        return "$(str(size)) G"
+        return "$(str(size)) G$_unit"
     else
         size /= 1024
     end
     if size < 1024
-        return "$(str(size)) T"
+        return "$(str(size)) T$_unit"
     else
         size /= 1024
     end
-    return "$(str(size)) P"
+    return "$(str(size)) P$_unit"
 end
 
 function num_to_si(num, unit)
