@@ -41,15 +41,18 @@ const datadir = joinpath(@__DIR__, "../data/cl-write-bandwidth")
 const devices = ["amd-gpu-gfx1012", "intel-gpu-1912", "intel-gpu-9bc4"]
 const data = Dict(dev=>load_data(joinpath(datadir, "$(dev).csv"))
                   for dev in devices)
+const max_bandwidths = Dict("amd-gpu-gfx1012"=>224e9,
+                            "intel-gpu-1912"=>34.1e9,
+                            "intel-gpu-9bc4"=>45.8e9)
 
-function plot_dummy(data)
+function plot_dummy(data, max_bw)
     neles = 2 .^ (10:23)
     cnt_mid = 0
     cnt_big = 0
     xmin = Inf
     xmax = 0.0
-    ymin = Inf
-    ymax = 0.0
+    ymin = max_bw
+    ymax = max_bw
     for nele in neles
         line = filter_data(x->nele - 2 <= x.nele <= nele + 2, data)
         if nele <= 2^16
@@ -68,6 +71,7 @@ function plot_dummy(data)
         ymax = max(ymax, maximum(y))
         plot(x, y, style, label="$(size_to_str(nele * 4))")
     end
+    axhline(max_bw, color="r", ls="dotted", linewidth=2)
     xscale("log")
     yscale("log")
     grid()
@@ -93,14 +97,14 @@ function plot_dummy(data)
     ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
 end
 
-function plot_compute(data)
+function plot_compute(data, max_bw)
     neles = 2 .^ (10:23)
     cnt_mid = 0
     cnt_big = 0
     # xmin = Inf
     # xmax = 0.0
-    ymin = Inf
-    ymax = 0.0
+    ymin = max_bw
+    ymax = max_bw
     for nele in neles
         line = filter_data(x->nele - 2 <= x.nele <= nele + 2, data)
         if nele <= 2^16
@@ -119,6 +123,7 @@ function plot_compute(data)
         ymax = max(ymax, maximum(y))
         plot(x, y, style, label="$(size_to_str(nele * 4))")
     end
+    axhline(max_bw, color="r", ls="dotted", linewidth=2)
     yscale("log")
     grid()
     xlabel("Memory Write per Kernel (B)")
@@ -149,10 +154,10 @@ for dev in devices
     d = data[dev]
 
     ax = subplot(1, 2, 1)
-    plot_dummy(d)
+    plot_dummy(d, max_bandwidths[dev])
 
     ax = subplot(1, 2, 2)
-    plot_compute(d)
+    plot_compute(d, max_bandwidths[dev])
 
     tight_layout(pad=0.6)
     NaCsPlot.maybe_save("$(prefix)_$(dev)")
