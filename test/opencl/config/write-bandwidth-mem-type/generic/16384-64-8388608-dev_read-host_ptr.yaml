@@ -1,0 +1,9 @@
+devices:
+  - cpu: false
+nele: 16384
+nrep: 64
+nalloc: 8388608
+readable: true
+host_access: true
+host_write: true
+host_ptr: true
