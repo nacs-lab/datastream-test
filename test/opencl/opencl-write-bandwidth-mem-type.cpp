@@ -83,6 +83,11 @@ static YAML::Node test_device(cl::Device &dev, size_t nrep, size_t nele, size_t 
     res["t"] = t1;
     res["nrep"] = nrep;
     res["nele"] = nele;
+    res["nalloc"] = nalloc;
+    res["readable"] = readable;
+    res["host_access"] = host_access;
+    res["host_write"] = host_write;
+    res["host_ptr"] = host_ptr;
     return res;
 }
 
