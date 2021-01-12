@@ -1,0 +1,5 @@
+devices:
+  - cpu: false
+nele: 1048576
+nrep: 32
+nstream: 4
