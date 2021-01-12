@@ -47,7 +47,7 @@ static YAML::Node test_device(cl::Device &dev, size_t nrep, size_t nele, size_t 
     NaCs::Timer timer;
     auto flag = CL_MEM_READ_WRITE | CL_MEM_HOST_NO_ACCESS;
     std::vector<cl::Buffer> buffs;
-    for (int i = 0; i < nstream; i++)
+    for (int i = 0; i < nstream * 2; i++)
         buffs.emplace_back(ctx, flag, sizeof(float) * nele);
     std::vector<cl::Event> evts(nstream);
 
