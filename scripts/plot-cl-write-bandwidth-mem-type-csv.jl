@@ -157,10 +157,10 @@ function plot_minsizes(d, max_bw, sp_offset, readable, host_access, host_write, 
     title("Min Buff: 0 B/$suffix", fontsize=20)
     ax = subplot(8, 3, 2 + sp_offset)
     plot_nrep(d, max_bw, data_filter(2^20, readable, host_access, host_write, host_ptr))
-    title("Min Buff: $(size_to_str(2^20, "B"))/$suffix", fontsize=20)
+    title("Min Buff: $(size_to_str(2^20 * 4, "B"))/$suffix", fontsize=20)
     ax = subplot(8, 3, 3 + sp_offset)
     plot_nrep(d, max_bw, data_filter(2^23, readable, host_access, host_write, host_ptr))
-    title("Min Buff: $(size_to_str(2^23, "B"))/$suffix", fontsize=20)
+    title("Min Buff: $(size_to_str(2^23 * 4, "B"))/$suffix", fontsize=20)
 end
 
 function plot_readable(d, max_bw, sp_offset, host_access, host_write, host_ptr)
