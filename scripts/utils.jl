@@ -81,3 +81,37 @@ function num_to_si(num, unit)
         return "$(str(num * 1e24)) y$unit"
     end
 end
+
+function write_leb128(io, vu)
+    while true
+        b = (vu & 0x7f) % UInt8
+        vu = vu >> 7
+        if vu == 0
+            write(io, b)
+            return
+        end
+        write(io, (b | 0x80)::UInt8)
+    end
+end
+
+function write_leb128(io, array::AbstractVector)
+    for v in array
+        write_leb128(io, v)
+    end
+end
+
+function write_swapsign_leb128(io, v::T) where T
+    UT = unsigned(T)
+    if v >= 0
+        vu = UT(v) << 1
+    else
+        vu = UT(-v - 1) << 1 | 0x1
+    end
+    write_leb128(io, vu)
+end
+
+function write_swapsign_leb128(io, array::AbstractVector)
+    for v in array
+        write_swapsign_leb128(io, v)
+    end
+end

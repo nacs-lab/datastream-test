@@ -3,29 +3,7 @@
 using YAML
 
 include("cl-utils.jl")
-
-function encode_leb128(io, vu)
-    while true
-        b = (vu & 0x7f) % UInt8
-        vu = vu >> 7
-        if vu == 0
-            write(io, b)
-            return
-        end
-        write(io, (b | 0x80)::UInt8)
-    end
-end
-
-function encode_array(io, array)
-    for v in array
-        if v >= 0
-            vu = UInt32(v) << 1
-        else
-            vu = UInt32(-v - 1) << 1 | 0x1
-        end
-        encode_leb128(io, vu)
-    end
-end
+include("utils.jl")
 
 function output_result(prefix, res, native)
     dev = get_device_id(res)
@@ -42,7 +20,7 @@ function output_result(prefix, res, native)
         write(io, Float64(res["start"]))
         write(io, Float64(res["step"]))
         write(io, UInt32(res["nsteps"]))
-        encode_array(io, res[native ? "diff_native" : "diff"])
+        write_swapsign_leb128(io, res[native ? "diff_native" : "diff"])
     end
 end
 
