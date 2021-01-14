@@ -1,0 +1,5 @@
+devices:
+  - cpu: false
+nrep: 1024
+nele: 32768
+nconcurrent: 16
