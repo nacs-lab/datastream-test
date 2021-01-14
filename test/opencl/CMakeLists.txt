@@ -15,3 +15,6 @@ target_link_libraries(opencl-write-bandwidth-mem-type nacs-utils datastream-help
 
 add_executable(opencl-parallel-rw opencl-parallel-rw.cpp)
 target_link_libraries(opencl-parallel-rw nacs-utils datastream-helpers)
+
+add_executable(opencl-rw-latency opencl-rw-latency.cpp)
+target_link_libraries(opencl-rw-latency nacs-utils datastream-helpers)
