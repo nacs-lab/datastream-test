@@ -9,29 +9,6 @@ include("utils.jl")
 
 const prefix = joinpath(@__DIR__, "../imgs/compute-accuracy")
 
-struct LEB128
-    v::Vector{UInt8}
-end
-
-function Base.iterate(vl::LEB128, state=1)
-    if state > length(vl.v)
-        return
-    end
-    v::UInt64 = 0
-    shift = 0
-    while true
-        v8 = vl.v[state]
-        state += 1
-        if v8 & 0x80 == 0
-            return v | UInt64(v8) << shift, state
-        end
-        v = v | UInt64(v8 & 0x7f) << shift
-        shift += 7
-    end
-end
-
-Base.IteratorSize(::LEB128) = Base.SizeUnknown()
-
 function decode_sign(v::UInt64)
     if v & 1 == 0
         return Int(v >> 1)
