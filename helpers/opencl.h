@@ -41,6 +41,17 @@ NACS_EXPORT(ds_helper) std::vector<cl::Device> all_ocl2_devices(const YAML::Node
 NACS_EXPORT(ds_helper) void get_device_ids(const cl::Device &dev, YAML::Node &out);
 NACS_EXPORT(ds_helper) YAML::Node get_device_ids(const cl::Device &dev);
 
+template<typename T>
+static inline void set_event_callback(cl::Event &evt, cl_int state, T &&cb)
+{
+    auto cp = new T(std::forward<T>(cb));
+    evt.setCallback(state, [] (cl_event evt, cl_int state, void *_cb) {
+        T *cb = static_cast<T*>(_cb);
+        (*cb)(evt, state);
+        delete cb;
+    }, cp);
+}
+
 }
 
 #endif
