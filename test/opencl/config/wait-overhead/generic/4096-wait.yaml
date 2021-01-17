@@ -1,0 +1,5 @@
+devices:
+  - cpu: false
+nrep: 1024
+nele: 4096
+do_wait: true
