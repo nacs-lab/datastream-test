@@ -30,6 +30,7 @@
 #include <nacs-utils/utils.h>
 
 #include <functional>
+#include <type_traits>
 #include <vector>
 
 namespace OCL {
@@ -44,9 +45,9 @@ NACS_EXPORT(ds_helper) YAML::Node get_device_ids(const cl::Device &dev);
 template<typename T>
 static inline void set_event_callback(cl::Event &evt, cl_int state, T &&cb)
 {
-    auto cp = new T(std::forward<T>(cb));
+    auto cp = new std::remove_reference_t<T>(std::forward<T>(cb));
     evt.setCallback(state, [] (cl_event evt, cl_int state, void *_cb) {
-        T *cb = static_cast<T*>(_cb);
+        auto cb = static_cast<std::remove_reference_t<T>*>(_cb);
         (*cb)(evt, state);
         delete cb;
     }, cp);
