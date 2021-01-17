@@ -18,7 +18,8 @@ function collect_results(dir, all_res)
             push!(dev_res, (t=res["t"], nrep=res["nrep"], nele=res["nele"],
                             nbuffer=res["nbuffer"], nworker=res["nworker"],
                             do_wait=res["do_wait"] ? 1 : 0,
-                            complete_cb=res["complete_cb"] ? 1 : 0))
+                            complete_cb=res["complete_cb"] ? 1 : 0,
+                            do_unmap=get(res, "do_unmap", false) ? 1 : 0))
         end
     end
 end
@@ -31,12 +32,12 @@ mkpath(dir, mode=0o755)
 for (dev, dev_res) in all_res
     name = joinpath(dir, "$(dev).csv")
     open(name, "w") do io
-        println(io, "Size,Repeat,Workers,Buffer Ring,Do Wait,Complete CB,Time (ns)")
+        println(io, "Size,Repeat,Workers,Buffer Ring,Do Wait,Complete CB,Unmap,Time (ns)")
         sort!(dev_res, by=x->(x.nele, x.nrep, x.nworker, x.nbuffer,
-                              x.do_wait, x.complete_cb, x.t))
+                              x.do_wait, x.complete_cb, x.do_unmap, x.t))
         for res in dev_res
             println(io, ("$(res.nele),$(res.nrep),$(res.nworker),$(res.nbuffer)," *
-                         "$(res.do_wait),$(res.complete_cb),$(res.t)"))
+                         "$(res.do_wait),$(res.complete_cb),$(res.do_unmap),$(res.t)"))
         end
     end
 end
