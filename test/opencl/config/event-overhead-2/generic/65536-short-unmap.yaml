@@ -1,0 +1,20 @@
+devices:
+  - cpu: false
+workers:
+  - # 0
+  - # 1
+  - # 2
+  - # 3
+  - # 4
+    input: [0, 1]
+  - # 5
+    input: [2, 3]
+  - # 6
+    input: [4, 5]
+    final: true
+nrep: 512
+nele: 65536
+nbuffer: 4
+do_wait: false
+complete_cb: false
+do_unmap: true

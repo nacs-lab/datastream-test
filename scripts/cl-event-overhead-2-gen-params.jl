@@ -56,7 +56,7 @@ workers:
     input: [24, 25, 26]
     final: true"""
 
-function write_file(dir, nele, long, do_wait, complete_cb)
+function write_file(dir, nele, long, do_wait, complete_cb, unmap)
     name = "$nele"
     if long
         name = "$name-long"
@@ -69,6 +69,9 @@ function write_file(dir, nele, long, do_wait, complete_cb)
     if complete_cb
         name = "$name-cb"
     end
+    if unmap
+        name = "$name-unmap"
+    end
     mkpath(dir, mode=0o755)
     open(joinpath(dir, name * ".yaml"), "w") do io
         println(io, """
@@ -80,6 +83,9 @@ function write_file(dir, nele, long, do_wait, complete_cb)
         println(io, "nbuffer: 4")
         println(io, "do_wait: $do_wait")
         println(io, "complete_cb: $complete_cb")
+        if unmap
+            println(io, "do_unmap: true")
+        end
     end
 end
 
@@ -90,7 +96,9 @@ for i in 10:23
     for long in (false, true)
         for do_wait in (false, true)
             for complete_cb in (false, true)
-                write_file(dir, nele, long, do_wait, complete_cb)
+                for unmap in (false, true)
+                    write_file(dir, nele, long, do_wait, complete_cb, unmap)
+                end
             end
         end
     end
