@@ -56,6 +56,7 @@ struct TestConfig {
     size_t nbuffer;
     bool complete_cb;
     bool do_wait;
+    bool do_unmap = false;
     std::vector<WorkerConfig> workers;
     bool check() const
     {
@@ -88,6 +89,12 @@ struct TestConfig {
         }
         return true;
     }
+};
+
+struct MapEvent {
+    cl::Event evt;
+    cl::Buffer &buff;
+    void *ptr;
 };
 
 static YAML::Node test_device(cl::Device &dev, const TestConfig &config)
@@ -173,9 +180,9 @@ static YAML::Node test_device(cl::Device &dev, const TestConfig &config)
         }
         std::vector<cl::Event> wait_vec{evts.back()};
         cl::Event evt;
-        queue.enqueueMapBuffer(buffs.back(), false, CL_MAP_READ,
-                               0, sizeof(float) * config.nele, &wait_vec, &evt);
-        return evt;
+        auto ptr = queue.enqueueMapBuffer(buffs.back(), false, CL_MAP_READ,
+                                          0, sizeof(float) * config.nele, &wait_vec, &evt);
+        return MapEvent{evt, buffs.back(), ptr};
     };
 
     // Warm up
@@ -186,7 +193,7 @@ static YAML::Node test_device(cl::Device &dev, const TestConfig &config)
 
     std::mutex lock;
     std::condition_variable cond_var;
-    std::deque<cl::Event> wait_queue;
+    std::deque<MapEvent> wait_queue;
     bool done = false;
 
     std::thread worker{[&] {
@@ -201,7 +208,9 @@ static YAML::Node test_device(cl::Device &dev, const TestConfig &config)
                 auto evt = wait_queue.back();
                 wait_queue.pop_back();
                 locker.unlock();
-                evt.wait();
+                evt.evt.wait();
+                if (config.do_unmap)
+                    queue.enqueueUnmapMemObject(evt.buff, evt.ptr);
                 locker.lock();
             }
         }
@@ -215,14 +224,34 @@ static YAML::Node test_device(cl::Device &dev, const TestConfig &config)
             buff_idx = 0;
         auto evt = run_once(buff_idx, prevbuff_idx);
         prevbuff_idx = buff_idx;
-        if (config.complete_cb)
-            OCL::set_event_callback(evt, CL_COMPLETE, dummy_cb);
         if (config.do_wait) {
+            // This unmaps the buffer if necessary
             {
                 std::lock_guard<std::mutex> locker(lock);
                 wait_queue.push_front(evt);
             }
             cond_var.notify_one();
+        }
+        else if (config.do_unmap) {
+            // Now the worker thread isn't going to unmap the buffer
+            // we need to figure out when we should do it...
+            if (config.complete_cb) {
+                // If we have callback, do it in the callback.
+                OCL::set_event_callback(evt.evt, CL_COMPLETE, [evt, &queue] (cl_event, cl_int) {
+                    queue.enqueueUnmapMemObject(evt.buff, evt.ptr);
+                });
+            }
+            else {
+                // Otherwise schedule it in the queue immediately.
+                std::vector<cl::Event> wait_vec{evt.evt};
+                queue.enqueueUnmapMemObject(evt.buff, evt.ptr, &wait_vec);
+            }
+        }
+        // Now we've makde sure the buffer is unmapped (when we want to unmap it)
+        // and we've also made sure to notify the worker thread,
+        // the only thing left to handle is the case when we want to register a dummy callback.
+        if (config.complete_cb && (config.do_wait || !config.do_unmap)) {
+            OCL::set_event_callback(evt.evt, CL_COMPLETE, dummy_cb);
         }
     }
     queue.finish();
@@ -240,7 +269,9 @@ static YAML::Node test_device(cl::Device &dev, const TestConfig &config)
     res["nele"] = config.nele;
     res["nbuffer"] = config.nbuffer;
     res["nworker"] = config.workers.size();
-    res["do_wait"] = config.do_wait;
+    if (config.do_wait)
+        res["do_wait"] = true;
+    res["do_unmap"] = config.do_unmap;
     res["complete_cb"] = config.complete_cb;
     return res;
 }
@@ -261,6 +292,8 @@ struct Config {
         conf.test.nele = required_key("nele").as<size_t>();
         conf.test.nbuffer = required_key("nbuffer").as<size_t>();
         conf.test.do_wait = required_key("do_wait").as<bool>();
+        if (auto node = file["do_unmap"])
+            conf.test.do_unmap = node.as<bool>();
         conf.test.complete_cb = required_key("complete_cb").as<bool>();
         auto workers = required_key("workers");
         if (!workers.IsSequence())
