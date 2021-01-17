@@ -25,14 +25,11 @@ end
 
 collect_results(ARGS[1], all_res)
 
-const prefix = ARGS[2]
+const dir = ARGS[2]
+mkpath(dir, mode=0o755)
 
 for (dev, dev_res) in all_res
-    if endswith(prefix, "/")
-        name = "$(prefix)$(dev).csv"
-    else
-        name = "$(prefix)-$(dev).csv"
-    end
+    name = joinpath(dir, "$(dev).csv")
     open(name, "w") do io
         println(io, "Size,Repeat,Submit CB,Start CB,Complete CB,Time (ns)")
         sort!(dev_res, by=x->(x.nele, x.nrep, x.submit_cb, x.start_cb, x.complete_cb, x.t))
