@@ -34,8 +34,8 @@ end
 
 sort_u(vals) = sort(unique(vals))
 
-const prefix = joinpath(@__DIR__, "../imgs/cl-event-overhead")
-const datadir = joinpath(@__DIR__, "../data/cl-event-overhead")
+const prefix = joinpath(@__DIR__, "../imgs/cl-wait-overhead")
+const datadir = joinpath(@__DIR__, "../data/cl-wait-overhead")
 
 const devices = ["amd-gpu-gfx1012", "intel-gpu-1912", "intel-gpu-9bc4"]
 const data = Dict(dev=>load_data(joinpath(datadir, "$(dev).csv"))
@@ -49,7 +49,7 @@ function plot_nele(data)
     xmax = 0.0
     ymin = Inf
     ymax = 0.0
-    for i in 0:7
+    for i in 0:1
         do_wait = (i & 1) != 0
         line = filter_data(x->x.do_wait == do_wait, data)
         x = line.nele .* 4
