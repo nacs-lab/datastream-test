@@ -1,0 +1,7 @@
+devices:
+  - cpu: false
+nrep: 1024
+nele: 8192
+submit_cb: false
+start_cb: true
+complete_cb: false
