@@ -113,7 +113,9 @@ for dev in devices
     d = data[dev]
     max_bw = max_bandwidths[dev]
 
+    figure()
     plot_nele(d)
+    tight_layout(pad=0.6)
     NaCsPlot.maybe_save("$(prefix)_$(dev)")
 end
 
