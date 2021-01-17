@@ -21,3 +21,6 @@ target_link_libraries(opencl-rw-latency nacs-utils datastream-helpers)
 
 add_executable(opencl-event-overhead opencl-event-overhead.cpp)
 target_link_libraries(opencl-event-overhead nacs-utils datastream-helpers)
+
+add_executable(opencl-wait-overhead opencl-wait-overhead.cpp)
+target_link_libraries(opencl-wait-overhead nacs-utils datastream-helpers)
