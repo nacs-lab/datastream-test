@@ -76,9 +76,9 @@ struct TestConfig {
                 return false;
             }
             for (unsigned j = 0; j < wc.nins; j++) {
-                if (consumed[j])
+                if (consumed[wc.ins[j]])
                     return false;
-                consumed[j] = 1;
+                consumed[wc.ins[j]] = 1;
             }
         }
         for (auto v: consumed) {
@@ -148,7 +148,7 @@ static YAML::Node test_device(cl::Device &dev, const TestConfig &config)
             };
             add_wait(prev_evts[wi]);
             for (unsigned j = 0; j < wc.nins; j++)
-                add_wait(evts[j]);
+                add_wait(evts[wc.ins[j]]);
             auto wait = wait_vec.empty() ? nullptr : &wait_vec;
             if (wc.nins == 0) {
                 generate.setArg(0, buffs[wi]);
@@ -266,6 +266,10 @@ struct Config {
         if (!workers.IsSequence())
             throw std::runtime_error("Invalid workers config.");
         for (const auto &worker: workers) {
+            if (worker.IsNull()) {
+                conf.test.workers.emplace_back();
+                continue;
+            }
             if (!worker.IsMap())
                 throw std::runtime_error("Invalid workers config.");
             auto &wc = conf.test.workers.emplace_back();
