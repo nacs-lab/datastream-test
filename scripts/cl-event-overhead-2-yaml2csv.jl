@@ -17,7 +17,7 @@ function collect_results(dir, all_res)
             dev_res = get!(()->[], all_res, get_device_id(res))
             push!(dev_res, (t=res["t"], nrep=res["nrep"], nele=res["nele"],
                             nbuffer=res["nbuffer"], nworker=res["nworker"],
-                            do_wait=res["do_wait"] ? 1 : 0,
+                            do_wait=get(res, "do_wait", false) ? 1 : 0,
                             complete_cb=res["complete_cb"] ? 1 : 0,
                             do_unmap=get(res, "do_unmap", false) ? 1 : 0))
         end

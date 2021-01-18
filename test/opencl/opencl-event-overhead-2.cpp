@@ -269,9 +269,9 @@ static YAML::Node test_device(cl::Device &dev, const TestConfig &config)
     res["nele"] = config.nele;
     res["nbuffer"] = config.nbuffer;
     res["nworker"] = config.workers.size();
-    if (config.do_wait)
-        res["do_wait"] = true;
-    res["do_unmap"] = config.do_unmap;
+    res["do_wait"] = config.do_wait;
+    if (config.do_unmap)
+        res["do_unmap"] = true;
     res["complete_cb"] = config.complete_cb;
     return res;
 }
