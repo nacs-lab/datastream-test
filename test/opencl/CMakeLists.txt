@@ -30,3 +30,6 @@ target_link_libraries(opencl-event-overhead-2 nacs-utils datastream-helpers)
 
 add_executable(opencl-mixed-compute opencl-mixed-compute.cpp)
 target_link_libraries(opencl-mixed-compute nacs-utils datastream-helpers)
+
+add_executable(opencl-mixed-compute-2 opencl-mixed-compute-2.cpp)
+target_link_libraries(opencl-mixed-compute-2 nacs-utils datastream-helpers)
