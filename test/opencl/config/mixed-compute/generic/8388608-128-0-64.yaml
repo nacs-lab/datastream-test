@@ -1,0 +1,6 @@
+devices:
+  - cpu: false
+nele: 8388608
+ncalc_single: 128
+ncalc_double: 0
+nrep: 64
