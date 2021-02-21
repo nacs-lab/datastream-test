@@ -26,11 +26,11 @@
 #include <string>
 #include <vector>
 
-static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nele,
+static YAML::Node test_device(cl::Device &dev, size_t nrep, size_t nele,
                               int ncalc_single, int ncalc_double)
 {
     cl::Context ctx({dev});
-    cl::CommandQueue queue(ctx, dev, ooo ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : 0);
+    cl::CommandQueue queue(ctx, dev, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE);
     // Use C++11 raw string literals for kernel source code
     std::string source{R"CLC(
         kernel void dummy()
@@ -190,7 +190,6 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
     res["tdummy"] = t0;
     res["tcompute_in_order"] = t1;
     res["tcompute_out_of_order"] = t2;
-    res["ooo"] = ooo;
     res["nrep"] = nrep;
     res["nele"] = nele;
     res["ncalc_single"] = ncalc_single;
@@ -200,7 +199,6 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
 
 struct Config {
     YAML::Node dev_filter;
-    bool ooo;
     size_t nrep;
     size_t nele;
     int ncalc_single;
@@ -214,7 +212,6 @@ struct Config {
                 return node;
             throw std::runtime_error(std::string("Required key '") + name + "' missing.");
         };
-        conf.ooo = required_key("ooo").as<bool>();
         conf.nrep = required_key("nrep").as<size_t>();
         conf.nele = required_key("nele").as<size_t>();
         conf.ncalc_single = required_key("ncalc_single").as<int>();
@@ -238,7 +235,7 @@ int main(int argc, char **argv)
     std::vector<YAML::Node> res;
     for (auto &dev: devices) {
         OCL::catch_error([&] {
-            res.push_back(test_device(dev, config.ooo, config.nrep, config.nele,
+            res.push_back(test_device(dev, config.nrep, config.nele,
                                       config.ncalc_single, config.ncalc_double));
         });
     }
