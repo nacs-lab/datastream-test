@@ -44,14 +44,29 @@ function filter_data(cb, data)
     return res
 end
 
+function preprocess_data2(data)
+    return (nele=Int.(@view data[:, 1]),
+            ncalc_single=Int.(@view data[:, 2]),
+            ncalc_double=Int.(@view data[:, 3]),
+            nrep=Int.(@view data[:, 4]),
+            tdummy=data[:, 5],
+            tcompute_in_order=fill(NaN, size(data, 1)),
+            tcompute_out_of_order=data[:, 6])
+end
+
+load_data2(name) = preprocess_data2(readdlm(name, ',', skipstart=1))
+
 sort_u(vals) = sort(unique(vals))
 
 const prefix = joinpath(@__DIR__, "../imgs/cl-mixed-compute")
 const datadir = joinpath(@__DIR__, "../data/cl-mixed-compute")
+const data2dir = joinpath(@__DIR__, "../data/cl-mixed-compute-2")
 
 const devices = ["amd-gpu-gfx1012", "intel-gpu-1912", "intel-gpu-9bc4"]
 const data = Dict(dev=>load_data(joinpath(datadir, "$(dev).csv"))
                   for dev in devices)
+const data2 = Dict(dev=>load_data2(joinpath(data2dir, "$(dev).csv"))
+                   for dev in devices)
 
 function plot_compute(data, ooo)
     ncalc_doubles = sort_u(data.ncalc_double)
@@ -88,15 +103,20 @@ function plot_compute(data, ooo)
 end
 
 for dev in devices
-    figure(figsize=[12.6, 5.6])
+    figure(figsize=[12.6, 5.6 * 2])
 
     d = data[dev]
+    d2 = data2[dev]
 
-    ax = subplot(1, 2, 1)
+    ax = subplot(2, 2, 1)
     plot_compute(d, false)
 
-    ax = subplot(1, 2, 2)
+    ax = subplot(2, 2, 2)
     plot_compute(d, true)
+
+    ax = subplot(2, 2, 3)
+    plot_compute(d2, true)
+    title("Interleaved 2")
 
     tight_layout(pad=0.6)
     NaCsPlot.maybe_save("$(prefix)_$(dev)")
