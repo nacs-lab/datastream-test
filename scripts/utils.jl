@@ -40,7 +40,15 @@ function size_to_str(size, unit="")
 end
 
 function num_to_si(num, unit)
-    str(num) = isinteger(num) ? string(Int(num)) : string(num)
+    function str(num)
+        for i in -10:10
+            n2 = num + i * eps(num)
+            if isinteger(n2)
+                return string(Int(n2))
+            end
+        end
+        return string(num)
+    end
     if num >= 1e24
         return "$(str(num / 1e24)) Y$unit"
     elseif num >= 1e21
