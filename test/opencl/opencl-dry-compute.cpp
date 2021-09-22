@@ -65,7 +65,15 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
     )CLC"};
     cl::Program prog(ctx, {source}, true);
     std::vector<cl::Event> evts(nrep);
+    auto marker_wait = &evts;
     NaCs::Timer timer;
+
+    auto res = OCL::get_device_ids(dev);
+    // Somehow the NVIDIA OpenCL driver (470.74)
+    // doesn't actually wait for any of the provides events.
+    // Pass in null and let it wait for everything previously queued works though...
+    if (res["platform_name"].as<std::string>() == "NVIDIA CUDA")
+        marker_wait = nullptr;
 
     {
         // Warm up
@@ -84,7 +92,7 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
     }
     {
         cl::Event evt;
-        queue.enqueueMarkerWithWaitList(&evts, &evt);
+        queue.enqueueMarkerWithWaitList(marker_wait, &evt);
         evt.wait();
     }
     auto t0 = (double)timer.elapsed() / double(nele) / double(nrep);
@@ -114,7 +122,7 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
     }
     {
         cl::Event evt;
-        queue.enqueueMarkerWithWaitList(&evts, &evt);
+        queue.enqueueMarkerWithWaitList(marker_wait, &evt);
         evt.wait();
     }
     auto t1 = (double)timer.elapsed() / double(nele) / double(nrep);
@@ -144,11 +152,11 @@ static YAML::Node test_device(cl::Device &dev, bool ooo, size_t nrep, size_t nel
     }
     {
         cl::Event evt;
-        queue.enqueueMarkerWithWaitList(&evts, &evt);
+        queue.enqueueMarkerWithWaitList(marker_wait, &evt);
         evt.wait();
     }
     auto t2 = (double)timer.elapsed() / double(nele) / double(nrep);
-    auto res = OCL::get_device_ids(dev);
+
     res["tdummy"] = t0;
     res["tcompute"] = t1;
     res["tcompute_native"] = t2;
