@@ -305,7 +305,7 @@ static void test_block(size_t nrep, uint32_t nele, uint32_t block_size)
     // wr_counter.syncs.reserve(nrep * nele / ring.blksz());
     // rd_counter.sync_ts.reserve(nrep * nele / ring.blksz());
     // wr_counter.sync_ts.reserve(nrep * nele / ring.blksz());
-    Thread::start(std::vector<int>{worker_cpu}, [=, &ring, &read_perf, &done,
+    ::Thread::start(std::vector<int>{worker_cpu}, [=, &ring, &read_perf, &done,
                                                  &rd_counter] (int) {
         Test::Timer timer;
         timer.enable_cache();
@@ -431,7 +431,7 @@ static void test_pipe(size_t nrep, uint32_t nele, uint32_t block_size)
     DataPipe<int> pipe(buff, nele, block_size);
     std::map<std::string,double> read_perf;
     std::atomic<bool> done{false};
-    Thread::start(std::vector<int>{worker_cpu}, [=, &pipe, &read_perf, &done] (int) {
+    ::Thread::start(std::vector<int>{worker_cpu}, [=, &pipe, &read_perf, &done] (int) {
         Test::Timer timer;
         timer.enable_cache();
         timer.restart();
@@ -539,7 +539,7 @@ int main(int argc, char **argv)
         exit(1);
     }
     int cpu0 = (int)parse_int(argv[3]);
-    Thread::pin(cpu0);
+    ::Thread::pin(cpu0);
     if (argc >= 4) {
         worker_cpu = (int)parse_int(argv[4]);
     }

@@ -74,7 +74,7 @@ static void time_run(size_t nrep, size_t ncalc, int *buff, const std::vector<int
 {
     std::atomic<bool> done{false};
     std::atomic<int> ready{0};
-    Thread::start(cpus, [=, &done, &ready] (int) {
+    ::Thread::start(cpus, [=, &done, &ready] (int) {
         time_run_dummy<Kernel>(nrep, ncalc, ready, done);
     });
     while (ready.load(std::memory_order_acquire) != cpus.size()) {
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "Needs at least three arguments\n");
         exit(1);
     }
-    Thread::pin((int)parse_int(argv[1]));
-    runtests(Thread::parse_cpulist(argv[2]), parse_int(argv[3]));
+    ::Thread::pin((int)parse_int(argv[1]));
+    runtests(::Thread::parse_cpulist(argv[2]), parse_int(argv[3]));
     return 0;
 }

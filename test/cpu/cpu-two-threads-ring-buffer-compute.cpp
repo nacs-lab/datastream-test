@@ -344,7 +344,7 @@ static void test_block(size_t nrep, uint32_t nele, uint32_t block_size)
     // wr_counter.syncs.reserve(nrep * nele / ring.blksz());
     // rd_counter.sync_ts.reserve(nrep * nele / ring.blksz());
     // wr_counter.sync_ts.reserve(nrep * nele / ring.blksz());
-    Thread::start(std::vector<int>{worker_cpu}, [=, &ring, &read_perf, &done,
+    ::Thread::start(std::vector<int>{worker_cpu}, [=, &ring, &read_perf, &done,
                                                  &rd_counter] (int) {
         Test::Timer timer;
         timer.enable_cache();
@@ -445,7 +445,7 @@ int main(int argc, char **argv)
     localbuff_sz = (int)parse_int(argv[5]) / 4;
     localbuff_blksz = (int)parse_int(argv[6]) / 4;
     int cpu0 = (int)parse_int(argv[7]);
-    Thread::pin(cpu0);
+    ::Thread::pin(cpu0);
     if (argc >= 4) {
         worker_cpu = (int)parse_int(argv[8]);
     }

@@ -765,7 +765,7 @@ static TestRes test_threads(const Config &config)
     TestRes res;
     std::atomic<int> done_count{0};
     auto t0 = Test::cycleclock();
-    Thread::start(cpus, [&] (int i) {
+    ::Thread::start(cpus, [&] (int i) {
         auto &w = workers[i];
         w.run<Kernel>(w.is_final ? &res.blocktime : nullptr);
         done_count.fetch_add(1, std::memory_order_release);
