@@ -52,7 +52,7 @@ const prefix = joinpath(@__DIR__, "../imgs/cl-dry-compute")
 const datadir = joinpath(@__DIR__, "../data/cl-dry-compute")
 
 const devices = ["amd-gpu-gfx1012", "intel-core-i7-6700k", "intel-core-i9-10885h",
-                 "intel-gpu-1912", "intel-gpu-9bc4"]
+                 "intel-gpu-1912", "intel-gpu-9bc4", "nvidia-geforce-gtx-1650-ti"]
 const data = Dict(dev=>load_data(joinpath(datadir, "$(dev).csv"))
                   for dev in devices)
 
