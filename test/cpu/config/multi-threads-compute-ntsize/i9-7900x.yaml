@@ -1,0 +1,5 @@
+ncores: 10
+total_block: 1048576
+block_size: 16384
+num_block: 32
+max_num_block: 16384
