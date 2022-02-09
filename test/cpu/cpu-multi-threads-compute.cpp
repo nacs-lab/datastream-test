@@ -298,7 +298,7 @@ enum class LocalBuffSize {
     S32k,
 };
 
-template<typename Kernel, LocalBuffSize use_localbuff, bool has_in, bool is_final>
+template<typename Kernel, LocalBuffSize use_localbuff, bool has_in, bool is_final, bool final_use_nt>
 class Worker {
     static constexpr uint32_t localbuff_sz =
         (use_localbuff == LocalBuffSize::S32k ? 32 * 1024 / 4 :
@@ -411,14 +411,14 @@ private:
         if constexpr (use_localbuff != LocalBuffSize::None) {
             if (m_localbuff_fill) {
                 ins[m_nins] = m_localbuff;
-                if (is_final) {
+                if (is_final && final_use_nt) {
                     Kernel::sum_multi_nt(m_localbuff_fill, m_nins + 1, ins, out);
                 }
                 else {
                     Kernel::sum_multi(m_localbuff_fill, m_nins + 1, ins, out);
                 }
             }
-            if (is_final) {
+            if (is_final && final_use_nt) {
                 Kernel::calc_multi_nt(blksz - m_localbuff_fill, m_nchn, m_nins, ins,
                                       out + m_localbuff_fill, t, freq, amp);
             }
@@ -428,7 +428,7 @@ private:
             }
         }
         else {
-            if (is_final) {
+            if (is_final && final_use_nt) {
                 Kernel::calc_multi_nt(blksz, m_nchn, m_nins, ins, out, t, freq, amp);
             }
             else {
@@ -443,7 +443,7 @@ private:
     NACS_INLINE void fill_out_noin(float *out, uint32_t blksz, float t, float freq, float amp)
     {
         if constexpr (use_localbuff != LocalBuffSize::None) {
-            if (is_final) {
+            if (is_final && final_use_nt) {
                 Kernel::copy_nt(m_localbuff_fill, (int*)m_localbuff, (int*)out);
                 Kernel::calc_multi_fill_nt(blksz - m_localbuff_fill, m_nchn,
                                            out + m_localbuff_fill, t, freq, amp);
@@ -455,7 +455,7 @@ private:
             }
         }
         else {
-            if (is_final) {
+            if (is_final && final_use_nt) {
                 Kernel::calc_multi_fill_nt(blksz, m_nchn, out, t, freq, amp);
             }
             else {
@@ -510,21 +510,19 @@ private:
     std::conditional_t<is_final,size_t,DummyType> m_blockcnt;
 };
 
-template<typename Kernel, LocalBuffSize use_localbuff, bool is_final>
+template<typename Kernel, LocalBuffSize use_localbuff, bool is_final, bool final_use_nt>
 static NACS_INLINE void _threadfun1(BlockRing<float> &out, BlockRing<float> *const *ins,
                                     int nins, int nchn, std::atomic<bool> &done,
                                     float t, float freq, float amp, size_t ntotalblk,
                                     std::vector<uint64_t> *blocktime=nullptr)
 {
     if (nins) {
-        Worker<Kernel,use_localbuff,true,is_final>::threadfun(out, ins, nins, nchn,
-                                                              done, t, freq, amp, ntotalblk,
-                                                              blocktime);
+        Worker<Kernel,use_localbuff,true,is_final,final_use_nt>::
+            threadfun(out, ins, nins, nchn, done, t, freq, amp, ntotalblk, blocktime);
     }
     else {
-        Worker<Kernel,use_localbuff,false,is_final>::threadfun(out, nullptr, 0, nchn,
-                                                               done, t, freq, amp, ntotalblk,
-                                                               blocktime);
+        Worker<Kernel,use_localbuff,false,is_final,final_use_nt>::
+            threadfun(out, nullptr, 0, nchn, done, t, freq, amp, ntotalblk, blocktime);
     }
 }
 
@@ -532,15 +530,20 @@ template<typename Kernel, LocalBuffSize use_localbuff>
 static NACS_INLINE void _threadfun2(BlockRing<float> &out, BlockRing<float> *const *ins,
                                     int nins, int nchn, std::atomic<bool> &done,
                                     float t, float freq, float amp, size_t ntotalblk,
-                                    bool is_final, std::vector<uint64_t> *blocktime=nullptr)
+                                    bool is_final, bool final_use_nt,
+                                    std::vector<uint64_t> *blocktime=nullptr)
 {
-    if (is_final) {
-        _threadfun1<Kernel,use_localbuff,true>(out, ins, nins, nchn, done,
-                                               t, freq, amp, ntotalblk, blocktime);
+    if (!is_final) {
+        _threadfun1<Kernel,use_localbuff,false,false>(out, ins, nins, nchn, done,
+                                                      t, freq, amp, ntotalblk, blocktime);
+    }
+    else if (final_use_nt) {
+        _threadfun1<Kernel,use_localbuff,true,true>(out, ins, nins, nchn, done,
+                                                    t, freq, amp, ntotalblk, blocktime);
     }
     else {
-        _threadfun1<Kernel,use_localbuff,false>(out, ins, nins, nchn, done,
-                                                t, freq, amp, ntotalblk, blocktime);
+        _threadfun1<Kernel,use_localbuff,true,false>(out, ins, nins, nchn, done,
+                                                     t, freq, amp, ntotalblk, blocktime);
     }
 }
 
@@ -549,20 +552,20 @@ static void NACS_INLINE threadfun(BlockRing<float> &out, BlockRing<float> *const
                                   int nins, int nchn, std::atomic<bool> &done,
                                   float t, float freq, float amp, size_t ntotalblk,
                                   LocalBuffSize use_localbuff, bool is_final,
-                                  std::vector<uint64_t> *blocktime=nullptr)
+                                  bool final_use_nt, std::vector<uint64_t> *blocktime=nullptr)
 {
     switch (use_localbuff) {
     case LocalBuffSize::S32k:
-        _threadfun2<Kernel,LocalBuffSize::S32k>(out, ins, nins, nchn, done,
-                                                t, freq, amp, ntotalblk, is_final, blocktime);
+        _threadfun2<Kernel,LocalBuffSize::S32k>(out, ins, nins, nchn, done, t, freq, amp,
+                                                ntotalblk, is_final, final_use_nt, blocktime);
         return;
     case LocalBuffSize::S16k:
-        _threadfun2<Kernel,LocalBuffSize::S16k>(out, ins, nins, nchn, done,
-                                                t, freq, amp, ntotalblk, is_final, blocktime);
+        _threadfun2<Kernel,LocalBuffSize::S16k>(out, ins, nins, nchn, done, t, freq, amp,
+                                                ntotalblk, is_final, final_use_nt, blocktime);
         return;
     default:
-        _threadfun2<Kernel,LocalBuffSize::None>(out, ins, nins, nchn, done,
-                                                t, freq, amp, ntotalblk, is_final, blocktime);
+        _threadfun2<Kernel,LocalBuffSize::None>(out, ins, nins, nchn, done, t, freq, amp,
+                                                ntotalblk, is_final, final_use_nt, blocktime);
         return;
     }
 }
@@ -584,6 +587,7 @@ struct Config {
     float amp;
     float t;
     float freq;
+    bool final_use_nt = true;
     static Config loadYAML(const char *fname)
     {
         Config conf;
@@ -606,6 +610,8 @@ struct Config {
         LocalBuffSize def_localbuff = LocalBuffSize::None;
         if (auto node = file["localbuff"])
             def_localbuff = (LocalBuffSize)node.as<int>();
+        if (auto node = file["final_use_nt"])
+            conf.final_use_nt = node.as<bool>();
         std::map<int,int> cpu_map;
         for (const auto &worker: workers) {
             if (!worker.IsMap())
@@ -665,11 +671,12 @@ struct WorkerParam {
     size_t ntotalblk;
     LocalBuffSize use_localbuff;
     bool is_final;
+    bool final_use_nt;
     template<typename Kernel>
     void NACS_INLINE run(std::vector<uint64_t> *blocktime=nullptr)
     {
         threadfun<Kernel>(*out, &ins[0], (int)ins.size(), nchn, *done, t, freq, amp, ntotalblk,
-                          use_localbuff, is_final, blocktime);
+                          use_localbuff, is_final, final_use_nt, blocktime);
     }
 };
 
@@ -761,6 +768,7 @@ static TestRes test_threads(const Config &config)
         w.ntotalblk = config.ntotalblk;
         w.use_localbuff = wc.use_localbuff;
         w.is_final = wc.is_final;
+        w.final_use_nt = config.final_use_nt;
     }
     TestRes res;
     std::atomic<int> done_count{0};
