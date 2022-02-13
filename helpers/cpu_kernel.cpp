@@ -18,6 +18,8 @@
 
 #include "cpu_kernel.h"
 
+#include <nacs-utils/number.h>
+
 #if NACS_CPU_X86 || NACS_CPU_X86_64
 #  include <immintrin.h>
 #elif NACS_CPU_AARCH64
@@ -62,13 +64,7 @@ namespace scalar {
 // of doing it once per channel.
 static NACS_INLINE float sinpif_pi(float d)
 {
-#if NACS_CPU_X86 || NACS_CPU_X86_64
-    int q = _mm_cvtss_si32(_mm_set_ss(d));
-#elif NACS_CPU_AARCH64
-    int q = vcvtns_s32_f32(d);
-#else
-    int q = d < 0 ? (int)(d - 0.5f) : (int)(d + 0.5f);
-#endif
+    int q = NaCs::round<int>(d);
     // Now `d` is the fractional part in the range `[-0.5, 0.5]`
     d = d - (float)q;
     auto s = d * d;
