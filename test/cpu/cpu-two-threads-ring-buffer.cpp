@@ -539,7 +539,7 @@ int main(int argc, char **argv)
         exit(1);
     }
     int cpu0 = (int)parse_int(argv[3]);
-    ::Thread::pin(cpu0);
+    NaCs::Thread::pin(cpu0);
     if (argc >= 4) {
         worker_cpu = (int)parse_int(argv[4]);
     }

@@ -445,7 +445,7 @@ int main(int argc, char **argv)
     localbuff_sz = (int)parse_int(argv[5]) / 4;
     localbuff_blksz = (int)parse_int(argv[6]) / 4;
     int cpu0 = (int)parse_int(argv[7]);
-    ::Thread::pin(cpu0);
+    NaCs::Thread::pin(cpu0);
     if (argc >= 4) {
         worker_cpu = (int)parse_int(argv[8]);
     }

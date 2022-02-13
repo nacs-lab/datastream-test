@@ -20,13 +20,12 @@
 #define HELPERS_THREAD_H
 
 #include <nacs-utils/utils.h>
+#include <nacs-utils/thread.h>
 
 #include <functional>
 #include <vector>
 
 namespace Thread {
-
-NACS_EXPORT(ds_helper) void pin(int cpu);
 
 NACS_EXPORT(ds_helper) std::vector<int> parse_cpulist(const char *cpulist);
 

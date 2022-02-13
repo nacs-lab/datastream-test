@@ -30,31 +30,6 @@ namespace Thread {
 
 using namespace NaCs;
 
-NACS_EXPORT() void pin(int cpu)
-{
-    auto self = pthread_self();
-
-    int ret;
-    if (likely(cpu < CPU_SETSIZE)) {
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        CPU_SET(cpu, &cpuset);
-        ret = pthread_setaffinity_np(self, sizeof(cpu_set_t), &cpuset);
-    }
-    else {
-        auto cpuset = CPU_ALLOC(cpu + 1);
-        auto setsize = CPU_ALLOC_SIZE(cpu + 1);
-        CPU_ZERO_S(setsize, cpuset);
-        CPU_SET_S(cpu, setsize, cpuset);
-        ret = pthread_setaffinity_np(self, setsize, cpuset);
-        CPU_FREE(cpuset);
-    }
-    if (ret != 0) {
-        throw std::system_error(-ret, std::system_category(),
-                                "Failed to set thread affinity.");
-    }
-}
-
 NACS_EXPORT() std::vector<int> parse_cpulist(const char *cpulist)
 {
     if (!cpulist || !*cpulist)
@@ -113,7 +88,7 @@ struct thread_data {
     {
         std::unique_ptr<thread_data> data{(thread_data*)_data};
         if (data->cpu >= 0)
-            pin(data->cpu);
+            NaCs::Thread::pin(data->cpu);
         data->cb(data->id);
         return nullptr;
     }

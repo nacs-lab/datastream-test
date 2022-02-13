@@ -150,7 +150,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "Needs at least three arguments\n");
         exit(1);
     }
-    ::Thread::pin((int)parse_int(argv[1]));
-    runtests(Thread::parse_cpulist(argv[2]), parse_int(argv[3]));
+    NaCs::Thread::pin((int)parse_int(argv[1]));
+    runtests(::Thread::parse_cpulist(argv[2]), parse_int(argv[3]));
     return 0;
 }
