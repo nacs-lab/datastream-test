@@ -59,7 +59,7 @@ static void compute_difference(int32_t *diff, const float *res,
 template<typename Kernel>
 static YAML::Node test_kernel(double start, double step, unsigned nsteps, const double *baseline)
 {
-    std::unique_ptr<float> buff{(float*)aligned_alloc(64, size_t(nsteps) * sizeof(float))};
+    std::unique_ptr<float,NaCs::CDeleter> buff{(float*)aligned_alloc(64, size_t(nsteps) * sizeof(float))};
     std::vector<int32_t> diff(nsteps);
     Kernel::sin_range(buff.get(), start, step, nsteps);
     compute_difference(&diff[0], buff.get(), baseline, nsteps);
