@@ -20,7 +20,14 @@
 #define HELPERS_CPU_KERNEL_H
 
 #include <nacs-utils/utils.h>
+#include <nacs-utils/number.h>
 #include <nacs-utils/processor.h>
+
+#if NACS_CPU_X86 || NACS_CPU_X86_64
+#  include <immintrin.h>
+#elif NACS_CPU_AARCH64
+#  include <arm_neon.h>
+#endif
 
 namespace CPUKernel {
 
@@ -32,6 +39,37 @@ NACS_EXPORT(ds_helper) bool hasavx512();
 namespace scalar {
 
 struct Kernel {
+    // Calculate `sin(pi * d) / pi`
+    // By computing `sin(pi * d)` instead of `sin(d)`, we don't need to do
+    // additional scaling of `d` before converting it to integer.
+    // Then by computing `sin(pi * d) / pi` the first order
+    // expansion term is kept as `d` which saves another multiplication at the end.
+    // We still need to generate the correct output from the correct input in the end
+    // so we still need the correct input/output scaling.
+    // However, the input needs to be scaled anyway so we can fold the input scaling in there,
+    // for the output, we can scale it once after all the channels are computed instead
+    // of doing it once per channel.
+    static NACS_INLINE float sinpif_pi(float d)
+    {
+        int q = NaCs::round<int>(d);
+        // Now `d` is the fractional part in the range `[-0.5, 0.5]`
+        d = d - (float)q;
+        auto s = d * d;
+
+        // For the original `d` in the range (0.5, 1.5), (2.5, 3.5) etc
+        // their value is the same as (-0.5, 0.5) with a sign flip in the input.
+        if (q & 1)
+            d = -d;
+
+        // These coefficients are numerically optimized to
+        // give the smallest maximum error over [0, 4] / [-4, 4]
+        // The maximum error is ~4.08e-7.
+        // When only limited to [0, 0.5], the error could be reduced to ~2.9e-7
+        // Either should be good enough since the output only has 16bit resolution.
+        auto u = -0.17818783f * s + 0.8098674f;
+        u = u * s - 1.6448531f;
+        return (s * d) * u + d;
+    }
     NACS_EXPORT(ds_helper) static
     void sin_range(float *out, double start, double step, unsigned nsteps);
     NACS_EXPORT(ds_helper) static
@@ -74,8 +112,22 @@ struct Kernel {
 #if NACS_CPU_AARCH64
 
 namespace asimd {
-
 struct Kernel {
+    static NACS_INLINE float32x4_t sinpif_pi(float32x4_t d)
+    {
+        auto q = vcvtnq_s32_f32(d);
+        // Now `d` is the fractional part in the range `[-0.5, 0.5]`
+        d = d - vcvtq_f32_s32(q);
+        auto s = d * d;
+
+        // Shift the last bit of `q` to the sign bit
+        // and therefore flip the sign of `d` if `q` is odd
+        d = float32x4_t(vshlq_n_s32(q, 31) ^ int32x4_t(d));
+
+        auto u = -0.17818783f * s + 0.8098674f;
+        u = u * s - 1.6448531f;
+        return (s * d) * u + d;
+    }
     NACS_EXPORT(ds_helper) static
     void sin_range(float *out, double start, double step, unsigned nsteps);
     NACS_EXPORT(ds_helper) static
@@ -121,6 +173,22 @@ struct Kernel {
 namespace sse2 {
 
 struct Kernel {
+    static NACS_INLINE __attribute__((target("sse2")))
+    __m128 sinpif_pi(__m128 d)
+    {
+        __m128i q = _mm_cvtps_epi32(d);
+        d = d - _mm_cvtepi32_ps(q);
+
+        __m128 s = d * d;
+
+        // Shift the last bit of `q` to the sign bit
+        // and therefore flip the sign of `d` if `q` is odd
+        d = __m128(_mm_slli_epi32(q, 31) ^ __m128i(d));
+
+        auto u = -0.17818783f * s + 0.8098674f;
+        u = u * s - 1.6448531f;
+        return (s * d) * u + d;
+    }
     NACS_EXPORT(ds_helper) static
     void sin_range(float *out, double start, double step, unsigned nsteps);
     NACS_EXPORT(ds_helper) static
@@ -163,6 +231,27 @@ struct Kernel {
 namespace avx {
 
 struct Kernel {
+    static NACS_INLINE __attribute__((target("avx")))
+    __m256 sinpif_pi(__m256 d)
+    {
+        __m256i q = _mm256_cvtps_epi32(d);
+        d = d - _mm256_cvtepi32_ps(q);
+
+        __m256 s = d * d;
+
+        // Shift the last bit of `q` to the sign bit
+        // and therefore flip the sign of `d` if `q` is odd
+        __m128i tmp[2] = {_mm256_castsi256_si128(q), _mm256_extractf128_si256(q, 1)};
+        tmp[0] = _mm_slli_epi32(tmp[0], 31);
+        tmp[1] = _mm_slli_epi32(tmp[1], 31);
+        auto mask = _mm256_castsi128_si256(tmp[0]);
+        mask = _mm256_insertf128_si256(mask, tmp[1], 1);
+        d = __m256(mask ^ __m256i(d));
+
+        auto u = -0.17818783f * s + 0.8098674f;
+        u = u * s - 1.6448531f;
+        return (s * d) * u + d;
+    }
     NACS_EXPORT(ds_helper) static
     void sin_range(float *out, double start, double step, unsigned nsteps);
     NACS_EXPORT(ds_helper) static
@@ -205,6 +294,22 @@ struct Kernel {
 namespace avx2 {
 
 struct Kernel {
+    static NACS_INLINE __attribute__((target("avx2,fma")))
+    __m256 sinpif_pi(__m256 d)
+    {
+        __m256i q = _mm256_cvtps_epi32(d);
+        d = d - _mm256_cvtepi32_ps(q);
+
+        __m256 s = d * d;
+
+        // Shift the last bit of `q` to the sign bit
+        // and therefore flip the sign of `d` if `q` is odd
+        d = __m256(_mm256_slli_epi32(q, 31) ^ __m256i(d));
+
+        auto u = -0.17818783f * s + 0.8098674f;
+        u = u * s - 1.6448531f;
+        return (s * d) * u + d;
+    }
     NACS_EXPORT(ds_helper) static
     void sin_range(float *out, double start, double step, unsigned nsteps);
     NACS_EXPORT(ds_helper) static
@@ -247,6 +352,22 @@ struct Kernel {
 namespace avx512 {
 
 struct Kernel {
+    static NACS_INLINE __attribute__((target("avx512f,avx512dq")))
+    __m512 sinpif_pi(__m512 d)
+    {
+        __m512i q = _mm512_cvtps_epi32(d);
+        d = d - _mm512_cvtepi32_ps(q);
+
+        __m512 s = d * d;
+
+        // Shift the last bit of `q` to the sign bit
+        // and therefore flip the sign of `d` if `q` is odd
+        d = __m512(_mm512_slli_epi32(q, 31) ^ __m512i(d));
+
+        auto u = -0.17818783f * s + 0.8098674f;
+        u = u * s - 1.6448531f;
+        return (s * d) * u + d;
+    }
     NACS_EXPORT(ds_helper) static
     void sin_range(float *out, double start, double step, unsigned nsteps);
     NACS_EXPORT(ds_helper) static
