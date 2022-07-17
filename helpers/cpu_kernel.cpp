@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include "cpu_kernel.h"
+#include "channel_worker.h"
 
 namespace CPUKernel {
 

@@ -4,6 +4,7 @@ set(datastream_helpers_HDRS
   cpu_kernel.h
   test.h
   threads.h
+  channel_worker.h
   )
 set(datastream_helpers_SRCS
   cpu_kernel.cpp
