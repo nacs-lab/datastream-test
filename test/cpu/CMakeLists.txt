@@ -24,3 +24,6 @@ target_link_libraries(cpu-multi-threads-compute nacs-utils datastream-helpers)
 add_executable(cpu-compute-accuracy cpu-compute-accuracy.cpp)
 target_link_libraries(cpu-compute-accuracy nacs-utils datastream-helpers -fopenmp)
 target_compile_options(cpu-compute-accuracy PRIVATE -fopenmp -ffast-math)
+
+add_executable(cpu-single-thread-full-sin cpu-single-thread-full-sin.cpp)
+target_link_libraries(cpu-single-thread-full-sin nacs-utils datastream-helpers)
