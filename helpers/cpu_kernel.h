@@ -27,6 +27,7 @@
 #  include <immintrin.h>
 #elif NACS_CPU_AARCH64
 #  include <arm_neon.h>
+#  include <arm_sve.h>
 #endif
 
 namespace CPUKernel {
@@ -166,6 +167,66 @@ struct Kernel {
 };
 
 } // namespace asimd
+
+namespace sve {
+struct Kernel {
+    static NACS_INLINE __attribute__((target("+sve")))
+    svfloat32_t sinpif_pi(svfloat32_t d)
+    {
+        auto ptrue = svptrue_b32();
+        auto qf = svrinta_x(ptrue, d);
+        auto q = svcvt_s32_x(ptrue, qf);
+        // Now `d` is the fractional part in the range `[-0.5, 0.5]`
+        d = svsub_x(ptrue, d, qf);
+        auto s = svmul_x(ptrue, d, d);
+
+        // Shift the last bit of `q` to the sign bit
+        // and therefore flip the sign of `d` if `q` is odd
+        d = svreinterpret_f32(sveor_x(ptrue, svlsl_x(ptrue, q, 31),
+                                      svreinterpret_s32(d)));
+
+        auto u = svmad_x(ptrue, svdup_f32(-0.17818783f), s, svdup_f32(0.8098674f));
+        u = svmad_x(ptrue, u, s, svdup_f32(-1.6448531f));
+        return svmad_x(ptrue, svmul_x(ptrue, s, d), u, d);
+    }
+    NACS_EXPORT(ds_helper) static
+    void sin_range(float *out, double start, double step, unsigned nsteps);
+    NACS_EXPORT(ds_helper) static
+    void calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void calc_fill(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void calc_fill_nt(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static void fill(size_t nrep, size_t ncalc, int *buff, int v);
+    NACS_EXPORT(ds_helper) static void fill_nt(size_t nrep, size_t ncalc, int *buff, int v);
+    NACS_EXPORT(ds_helper) static void copy(size_t nele, const int *in, int *out);
+    NACS_EXPORT(ds_helper) static void copy_nt(size_t nele, const int *in, int *out);
+    NACS_EXPORT(ds_helper) static void fill1(size_t nele, int *buff, int v);
+    NACS_EXPORT(ds_helper) static void read1(size_t nele, const int *buff);
+    NACS_EXPORT(ds_helper) static void sum(size_t nele, const float *buff1, const float *buff2);
+
+    NACS_EXPORT(ds_helper) static
+    void calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void calc_multi_fill_nt(size_t nele, int nchn, float *buff, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void read_calc_multi(size_t nele, int nchn, const float *buff,
+                         float t, float freq, float amp);
+
+    NACS_EXPORT(ds_helper) static
+    void calc_multi(size_t nele, int nchn, int nins, const float *ins[],
+                    float *out, float t, float freq, float amp);
+    NACS_EXPORT(ds_helper) static
+    void calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
+                       float *out, float t, float freq, float amp);
+
+    NACS_EXPORT(ds_helper) static
+    void sum_multi(size_t nele, int nins, const float *ins[], float *out);
+    NACS_EXPORT(ds_helper) static
+    void sum_multi_nt(size_t nele, int nins, const float *ins[], float *out);
+};
+
+} // namespace sve
 #endif
 
 #if NACS_CPU_X86 || NACS_CPU_X86_64

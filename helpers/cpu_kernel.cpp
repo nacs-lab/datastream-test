@@ -523,6 +523,356 @@ void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
 }
 
 } // namespace asimd
+
+namespace sve {
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::sin_range(float *out, double start, double step, unsigned nsteps)
+{
+    auto svelen_2 = svcntd();
+    auto svelen = svelen_2 * 2;
+    auto ptrue = svptrue_b32();
+    auto vstep = svdup_f64_x(ptrue, step);
+    auto vstart = svdup_f64_x(ptrue, start);
+    svbool_t pg;
+    for (size_t i = 0;
+         svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, (size_t)nsteps)));
+         i += svelen) {
+        auto idx1 = svindex_u64(i, 1);
+        auto phase_lo64 = svmad_x(ptrue, svcvt_f64_x(ptrue, idx1), vstep, vstart);
+        auto phase_lo = svcvt_f32_x(ptrue, phase_lo64);
+        auto idx2 = svindex_u64(i + svelen_2, 1);
+        auto phase_hi64 = svmad_x(ptrue, svcvt_f64_x(ptrue, idx2), vstep, vstart);
+        auto phase_hi = svcvt_f32_x(ptrue, phase_hi64);
+        svst1(pg, &out[i], sinpif_pi(svuzp1(phase_lo, phase_hi)));
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::calc_dry(size_t nrep, size_t ncalc, float t, float freq, float amp)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    asm volatile ("" : "+r"(nrep) :: "memory");
+    asm volatile ("" : "+r"(ncalc) :: "memory");
+    auto tp = svdup_f32(t);
+    auto fp = svdup_f32(freq);
+    auto ap = svdup_f32(amp);
+    for (size_t j = 0; j < nrep; j++) {
+        for (size_t i = 0; i < ncalc; i += svelen) {
+            asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
+            auto res = svmul_x(ptrue, ap, sinpif_pi(svmul_x(ptrue, tp, fp)));
+            asm volatile ("" :: "w"(res) : "memory");
+        }
+    }
+}
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::calc_fill(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    asm volatile ("" : "+r"(nrep) :: "memory");
+    asm volatile ("" : "+r"(ncalc) :: "memory");
+    auto tp = svdup_f32(t);
+    auto fp = svdup_f32(freq);
+    auto ap = svdup_f32(amp);
+    for (size_t j = 0; j < nrep; j++) {
+        svbool_t pg;
+        for (size_t i = 0;
+             svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, ncalc)));
+             i += svelen) {
+            asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
+            auto res = svmul_x(ptrue, ap, sinpif_pi(svmul_x(ptrue, tp, fp)));
+            svst1(pg, &buff[i], res);
+        }
+        asm volatile ("" :: "r"(buff) : "memory");
+    }
+}
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::calc_fill_nt(size_t nrep, size_t ncalc, float *buff, float t, float freq, float amp)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    asm volatile ("" : "+r"(nrep) :: "memory");
+    asm volatile ("" : "+r"(ncalc) :: "memory");
+    auto tp = svdup_f32(t);
+    auto fp = svdup_f32(freq);
+    auto ap = svdup_f32(amp);
+    for (size_t j = 0; j < nrep; j++) {
+        svbool_t pg;
+        for (size_t i = 0;
+             svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, ncalc)));
+             i += svelen) {
+            asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
+            auto res = svmul_x(ptrue, ap, sinpif_pi(svmul_x(ptrue, tp, fp)));
+            svstnt1(pg, &buff[i], res);
+        }
+        asm volatile ("" :: "r"(buff) : "memory");
+    }
+}
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::fill(size_t nrep, size_t ncalc, int *buff, int v)
+{
+    asm volatile ("" : "+r"(nrep) :: "memory");
+    asm volatile ("" : "+r"(ncalc) :: "memory");
+    auto svelen = svcntw();
+    auto vp = svdup_s32(v);
+    for (size_t j = 0; j < nrep; j++) {
+        asm volatile ("" : "+w"(vp) :: "memory");
+        svbool_t pg;
+        for (size_t i = 0;
+             svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, ncalc)));
+             i += svelen) {
+            svst1(pg, &buff[i], vp);
+        }
+        asm volatile ("" :: "r"(buff) : "memory");
+    }
+}
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::fill_nt(size_t nrep, size_t ncalc, int *buff, int v)
+{
+    asm volatile ("" : "+r"(nrep) :: "memory");
+    asm volatile ("" : "+r"(ncalc) :: "memory");
+    auto svelen = svcntw();
+    auto vp = svdup_s32(v);
+    for (size_t j = 0; j < nrep; j++) {
+        asm volatile ("" : "+w"(vp) :: "memory");
+        svbool_t pg;
+        for (size_t i = 0;
+             svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, ncalc)));
+             i += svelen) {
+            svstnt1(pg, &buff[i], vp);
+        }
+        asm volatile ("" :: "r"(buff) : "memory");
+    }
+}
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::copy(size_t nele, const int *in, int *out)
+{
+    auto svelen = svcntw();
+    asm volatile ("" : "+r"(nele), "+r"(in), "+r"(out) :: "memory");
+    svbool_t pg;
+    for (size_t i = 0;
+         svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, nele))); i += svelen) {
+        svst1(pg, &out[i], svld1(pg, &in[i]));
+    }
+    asm volatile ("" :: "r"(out) : "memory");
+}
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::copy_nt(size_t nele, const int *in, int *out)
+{
+    auto svelen = svcntw();
+    asm volatile ("" : "+r"(nele), "+r"(in), "+r"(out) :: "memory");
+    svbool_t pg;
+    for (size_t i = 0;
+         svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, nele))); i += svelen) {
+        svstnt1(pg, &out[i], svld1(pg, &in[i]));
+    }
+    asm volatile ("" :: "r"(out) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::fill1(size_t nele, int *buff, int v)
+{
+    asm volatile ("" : "+r"(nele) :: "memory");
+    auto svelen = svcntw();
+    auto vp = svdup_s32(v);
+    svbool_t pg;
+    for (size_t i = 0;
+         svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, nele))); i += svelen) {
+        svst1(pg, &buff[i], vp);
+    }
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::read1(size_t nele, const int *buff)
+{
+    asm volatile ("" : "+r"(nele) :: "memory");
+    auto svelen = svcntw();
+    svbool_t pg;
+    for (size_t i = 0;
+         svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, nele))); i += svelen) {
+        auto v = svld1(pg, &buff[i]);
+        asm volatile ("" : "+w"(v) :: "memory");
+    }
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::sum(size_t nele, const float *buff1, const float *buff2)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" :: "r"(buff1) : "memory");
+    asm volatile ("" :: "r"(buff2) : "memory");
+    for (size_t i = 0; i < nele; i += svelen) {
+        auto res = svadd_x(ptrue, svld1(ptrue, &buff1[i]),
+                           svld1(ptrue, &buff2[i]));
+        asm volatile ("" :: "w"(res) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::calc_multi_fill(size_t nele, int nchn, float *buff, float t, float freq, float amp)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = svdup_f32(t);
+    auto fp = svdup_f32(freq);
+    auto ap = svdup_f32(amp);
+    svbool_t pg;
+    for (size_t i = 0;
+         svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, nele))); i += svelen) {
+        auto res = svdup_f32(0);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
+            auto res0 = svmul_x(ptrue, ap, sinpif_pi(svmul_x(ptrue, tp, fp)));
+            res = svadd_x(ptrue, res, res0);
+        }
+        svst1(pg, &buff[i], res);
+    }
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::calc_multi_fill_nt(size_t nele, int nchn, float *buff,
+                                float t, float freq, float amp)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = svdup_f32(t);
+    auto fp = svdup_f32(freq);
+    auto ap = svdup_f32(amp);
+    svbool_t pg;
+    for (size_t i = 0;
+         svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, nele))); i += svelen) {
+        auto res = svdup_f32(0);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
+            auto res0 = svmul_x(ptrue, ap, sinpif_pi(svmul_x(ptrue, tp, fp)));
+            res = svadd_x(ptrue, res, res0);
+        }
+        svstnt1(pg, &buff[i], res);
+    }
+    asm volatile ("" :: "r"(buff) : "memory");
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::read_calc_multi(size_t nele, int nchn, const float *buff,
+                             float t, float freq, float amp)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    asm volatile ("" :: "r"(buff) : "memory");
+    auto tp = svdup_f32(t);
+    auto fp = svdup_f32(freq);
+    auto ap = svdup_f32(amp);
+    svbool_t pg;
+    for (size_t i = 0;
+         svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, nele))); i += svelen) {
+        auto res = svld1(pg, &buff[i]);
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
+            auto res0 = svmul_x(ptrue, ap, sinpif_pi(svmul_x(ptrue, tp, fp)));
+            res = svadd_x(ptrue, res, res0);
+        }
+        asm volatile ("" :: "w"(res) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::calc_multi(size_t nele, int nchn, int nins, const float *ins[],
+                        float *out, float t, float freq, float amp)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = svdup_f32(t);
+    auto fp = svdup_f32(freq);
+    auto ap = svdup_f32(amp);
+    svbool_t pg;
+    for (size_t i = 0;
+         svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, nele))); i += svelen) {
+        auto res = svld1(pg, &ins[0][i]);
+        for (int in = 1; in < nins; in++)
+            res = svadd_x(ptrue, res, svld1(pg, &ins[in][i]));
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
+            auto res0 = svmul_x(ptrue, ap, sinpif_pi(svmul_x(ptrue, tp, fp)));
+            res = svadd_x(ptrue, res, res0);
+        }
+        svst1(pg, &out[i], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::calc_multi_nt(size_t nele, int nchn, int nins, const float *ins[],
+                           float *out, float t, float freq, float amp)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    asm volatile ("" : "+r"(nele) :: "memory");
+    asm volatile ("" : "+r"(nchn) :: "memory");
+    auto tp = svdup_f32(t);
+    auto fp = svdup_f32(freq);
+    auto ap = svdup_f32(amp);
+    svbool_t pg;
+    for (size_t i = 0;
+         svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, nele))); i += svelen) {
+        auto res = svld1(pg, &ins[0][i]);
+        for (int in = 1; in < nins; in++)
+            res = svadd_x(ptrue, res, svld1(pg, &ins[in][i]));
+        for (int c = 0; c < nchn; c++) {
+            asm volatile ("" : "+w"(tp), "+w"(fp), "+w"(ap) :: "memory");
+            auto res0 = svmul_x(ptrue, ap, sinpif_pi(svmul_x(ptrue, tp, fp)));
+            res = svadd_x(ptrue, res, res0);
+        }
+        svstnt1(pg, &out[i], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::sum_multi(size_t nele, int nins, const float *ins[], float *out)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    asm volatile ("" : "+r"(nele) :: "memory");
+    svbool_t pg;
+    for (size_t i = 0;
+         svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, nele))); i += svelen) {
+        auto res = svld1(pg, &ins[0][i]);
+        for (int in = 1; in < nins; in++)
+            res = svadd_x(ptrue, res, svld1(pg, &ins[in][i]));
+        svst1(pg, &out[i], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    asm volatile ("" : "+r"(nele) :: "memory");
+    svbool_t pg;
+    for (size_t i = 0;
+         svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, nele))); i += svelen) {
+        auto res = svld1(pg, &ins[0][i]);
+        for (int in = 1; in < nins; in++)
+            res = svadd_x(ptrue, res, svld1(pg, &ins[in][i]));
+        svstnt1(pg, &out[i], res);
+    }
+}
+
+} // namespace sve
 #endif
 
 #if NACS_CPU_X86 || NACS_CPU_X86_64
