@@ -37,6 +37,11 @@ NACS_EXPORT(ds_helper) bool hasavx();
 NACS_EXPORT(ds_helper) bool hasavx2();
 NACS_EXPORT(ds_helper) bool hasavx512();
 
+struct ChnParamFixed {
+    double freq;
+    double amp;
+};
+
 namespace scalar {
 
 struct Kernel {
@@ -106,6 +111,15 @@ struct Kernel {
     void sum_multi(size_t nele, int nins, const float *ins[], float *out);
     NACS_EXPORT(ds_helper) static
     void sum_multi_nt(size_t nele, int nins, const float *ins[], float *out);
+
+    NACS_EXPORT(ds_helper) static
+    void sin_single(float *out, unsigned nsteps, unsigned nrep, ChnParamFixed param);
+    NACS_EXPORT(ds_helper) static
+    void sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                            const ChnParamFixed *params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                              const ChnParamFixed *params, unsigned nparams);
 };
 
 } // namespace scalar
@@ -164,6 +178,15 @@ struct Kernel {
     void sum_multi(size_t nele, int nins, const float *ins[], float *out);
     NACS_EXPORT(ds_helper) static
     void sum_multi_nt(size_t nele, int nins, const float *ins[], float *out);
+
+    NACS_EXPORT(ds_helper) static
+    void sin_single(float *out, unsigned nsteps, unsigned nrep, ChnParamFixed param);
+    NACS_EXPORT(ds_helper) static
+    void sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                            const ChnParamFixed *params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                              const ChnParamFixed *params, unsigned nparams);
 };
 
 } // namespace asimd
@@ -224,6 +247,15 @@ struct Kernel {
     void sum_multi(size_t nele, int nins, const float *ins[], float *out);
     NACS_EXPORT(ds_helper) static
     void sum_multi_nt(size_t nele, int nins, const float *ins[], float *out);
+
+    NACS_EXPORT(ds_helper) static
+    void sin_single(float *out, unsigned nsteps, unsigned nrep, ChnParamFixed param);
+    NACS_EXPORT(ds_helper) static
+    void sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                            const ChnParamFixed *params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                              const ChnParamFixed *params, unsigned nparams);
 };
 
 } // namespace sve

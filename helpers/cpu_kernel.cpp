@@ -260,6 +260,68 @@ void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
     }
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
+                        ChnParamFixed param)
+{
+    double phase = 0;
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i++) {
+            out[i] = float(param.amp) * sinpif_pi(float(phase));
+            phase += param.freq;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                                const ChnParamFixed *params, unsigned nparams)
+{
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i++) {
+            float v = 0;
+            for (unsigned c = 0; c < nparams; c++) {
+                auto phase = phases[c];
+                auto param = params[c];
+                v += float(param.amp) * sinpif_pi(float(phase));
+                phase += param.freq;
+                phases[c] = phase;
+            }
+            out[i] = v;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                                  const ChnParamFixed *params, unsigned nparams)
+{
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        auto phase = phases[0];
+        auto param = params[0];
+        for (unsigned i = 0; i < nsteps; i++) {
+            out[i] = float(param.amp) * sinpif_pi(float(phase));
+            phase += param.freq;
+        }
+        phases[0] = phase;
+
+        for (unsigned c = 1; c < nparams; c++) {
+            auto phase = phases[c];
+            auto param = params[c];
+            for (unsigned i = 0; i < nsteps; i++) {
+                out[i] += float(param.amp) * sinpif_pi(float(phase));
+                phase += param.freq;
+            }
+            phases[c] = phase;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
 } // namespace scalar
 
 #if NACS_CPU_AARCH64
@@ -519,6 +581,76 @@ void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
         for (int in = 1; in < nins; in++)
             res += vld1q_f32(&ins[in][i * 4]);
         vst1q_f32(&out[i * 4], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
+                        ChnParamFixed param)
+{
+    float32x4_t inc{0, 1, 2, 3};
+    double phase = 0;
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 4) {
+            auto phase_v = float(phase) + inc * float(param.freq);
+            vst1q_f32(&out[i], float(param.amp) * sinpif_pi(phase_v));
+            phase += param.freq * 4;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                                const ChnParamFixed *params, unsigned nparams)
+{
+    float32x4_t inc{0, 1, 2, 3};
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 4) {
+            float32x4_t v{0, 0, 0, 0};
+            for (unsigned c = 0; c < nparams; c++) {
+                auto phase = phases[c];
+                auto param = params[c];
+                auto phase_v = float(phase) + inc * float(param.freq);
+                v += float(param.amp) * sinpif_pi(phase_v);
+                phase += param.freq * 4;
+                phases[c] = phase;
+            }
+            vst1q_f32(&out[i], v);
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                                  const ChnParamFixed *params, unsigned nparams)
+{
+    float32x4_t inc{0, 1, 2, 3};
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        auto phase = phases[0];
+        auto param = params[0];
+        for (unsigned i = 0; i < nsteps; i += 4) {
+            auto phase_v = float(phase) + inc * float(param.freq);
+            vst1q_f32(&out[i], float(param.amp) * sinpif_pi(phase_v));
+            phase += param.freq * 4;
+        }
+        phases[0] = phase;
+
+        for (unsigned c = 1; c < nparams; c++) {
+            auto phase = phases[c];
+            auto param = params[c];
+            for (unsigned i = 0; i < nsteps; i += 4) {
+                auto phase_v = float(phase) + inc * float(param.freq);
+                vst1q_f32(&out[i], vld1q_f32(&out[i]) +
+                          float(param.amp) * sinpif_pi(phase_v));
+                phase += param.freq * 4;
+            }
+            phases[c] = phase;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
     }
 }
 
@@ -869,6 +1001,106 @@ void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
         for (int in = 1; in < nins; in++)
             res = svadd_x(ptrue, res, svld1(pg, &ins[in][i]));
         svstnt1(pg, &out[i], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
+                        ChnParamFixed param)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    auto inc = svcvt_f32_x(ptrue, svindex_u32(0, 1));
+    double phase = 0;
+    for (unsigned j = 0; j < nrep; j++) {
+        svbool_t pg;
+        for (size_t i = 0;
+             svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, (size_t)nsteps)));
+             i += svelen) {
+            auto vphase = svdup_f32_x(ptrue, float(phase));
+            auto vfreq = svdup_f32_x(ptrue, float(param.freq));
+            auto vamp = svdup_f32_x(ptrue, float(param.amp));
+            vphase = svmad_x(ptrue, inc, vfreq, vphase);
+            svst1(pg, &out[i], svmul_x(ptrue, vamp, sinpif_pi(vphase)));
+            phase += param.freq * double(svelen);
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                                const ChnParamFixed *params, unsigned nparams)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    auto inc = svcvt_f32_x(ptrue, svindex_u32(0, 1));
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        svbool_t pg;
+        for (size_t i = 0;
+             svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, (size_t)nsteps)));
+             i += svelen) {
+            auto v = svdup_f32_x(ptrue, 0);
+            for (unsigned c = 0; c < nparams; c++) {
+                auto phase = phases[c];
+                auto param = params[c];
+                auto vphase = svdup_f32_x(ptrue, float(phase));
+                auto vfreq = svdup_f32_x(ptrue, float(param.freq));
+                auto vamp = svdup_f32_x(ptrue, float(param.amp));
+                vphase = svmad_x(ptrue, inc, vfreq, vphase);
+                v = svmad_x(ptrue, vamp, sinpif_pi(vphase), v);
+                phase += param.freq * double(svelen);
+                phases[c] = phase;
+            }
+            svst1(pg, &out[i], v);
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("+sve"),flatten))
+void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                                  const ChnParamFixed *params, unsigned nparams)
+{
+    auto svelen = svcntw();
+    auto ptrue = svptrue_b32();
+    auto inc = svcvt_f32_x(ptrue, svindex_u32(0, 1));
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        auto phase = phases[0];
+        auto param = params[0];
+        auto vfreq = svdup_f32_x(ptrue, float(param.freq));
+        auto vamp = svdup_f32_x(ptrue, float(param.amp));
+        svbool_t pg;
+        for (size_t i = 0;
+             svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, (size_t)nsteps)));
+             i += svelen) {
+            auto vphase = svdup_f32_x(ptrue, float(phase));
+            vphase = svmad_x(ptrue, inc, vfreq, vphase);
+            svst1(pg, &out[i], svmul_x(ptrue, vamp, sinpif_pi(vphase)));
+            phase += param.freq * double(svelen);
+        }
+        phases[0] = phase;
+
+        for (unsigned c = 1; c < nparams; c++) {
+            auto phase = phases[c];
+            auto param = params[c];
+            auto vfreq = svdup_f32_x(ptrue, float(param.freq));
+            auto vamp = svdup_f32_x(ptrue, float(param.amp));
+            for (size_t i = 0;
+                 svptest_first(svptrue_b32(), (pg = svwhilelt_b32(i, (size_t)nsteps)));
+                 i += svelen) {
+                auto vphase = svdup_f32_x(ptrue, float(phase));
+                vphase = svmad_x(ptrue, inc, vfreq, vphase);
+                auto v = svmad_x(ptrue, vamp, sinpif_pi(vphase),
+                                 svld1(pg, &out[i]));
+                svst1(pg, &out[i], v);
+                phase += param.freq * double(svelen);
+            }
+            phases[c] = phase;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
     }
 }
 
