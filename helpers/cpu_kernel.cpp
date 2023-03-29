@@ -43,6 +43,15 @@ NACS_EXPORT() bool hasavx512()
 
 #endif
 
+#if NACS_CPU_AARCH64
+
+NACS_EXPORT() bool hassve()
+{
+    return host.test_feature(NaCs::AArch64::Feature::sve);
+}
+
+#endif
+
 namespace scalar {
 
 NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))

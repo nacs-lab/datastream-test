@@ -36,6 +36,7 @@ NACS_EXPORT(ds_helper) extern const NaCs::CPUInfo &host;
 NACS_EXPORT(ds_helper) bool hasavx();
 NACS_EXPORT(ds_helper) bool hasavx2();
 NACS_EXPORT(ds_helper) bool hasavx512();
+NACS_EXPORT(ds_helper) bool hassve();
 
 struct ChnParamFixed {
     double freq;
