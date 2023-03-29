@@ -1391,6 +1391,79 @@ void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
     }
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
+                        ChnParamFixed param)
+{
+    float inc_buf[] = {0, 1, 2, 3};
+    auto inc = _mm_load_ps(inc_buf);
+    double phase = 0;
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 4) {
+            auto phase_v = float(phase) + inc * float(param.freq);
+            _mm_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
+            phase += param.freq * 4;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                                const ChnParamFixed *params, unsigned nparams)
+{
+    float inc_buf[] = {0, 1, 2, 3};
+    auto inc = _mm_load_ps(inc_buf);
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 4) {
+            auto v = _mm_set1_ps(0);
+            for (unsigned c = 0; c < nparams; c++) {
+                auto phase = phases[c];
+                auto param = params[c];
+                auto phase_v = float(phase) + inc * float(param.freq);
+                v += float(param.amp) * sinpif_pi(phase_v);
+                phase += param.freq * 4;
+                phases[c] = phase;
+            }
+            _mm_store_ps(&out[i], v);
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                                  const ChnParamFixed *params, unsigned nparams)
+{
+    float inc_buf[] = {0, 1, 2, 3};
+    auto inc = _mm_load_ps(inc_buf);
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        auto phase = phases[0];
+        auto param = params[0];
+        for (unsigned i = 0; i < nsteps; i += 4) {
+            auto phase_v = float(phase) + inc * float(param.freq);
+            _mm_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
+            phase += param.freq * 4;
+        }
+        phases[0] = phase;
+
+        for (unsigned c = 1; c < nparams; c++) {
+            auto phase = phases[c];
+            auto param = params[c];
+            for (unsigned i = 0; i < nsteps; i += 4) {
+                auto phase_v = float(phase) + inc * float(param.freq);
+                _mm_store_ps(&out[i], _mm_load_ps(&out[i]) +
+                             float(param.amp) * sinpif_pi(phase_v));
+                phase += param.freq * 4;
+            }
+            phases[c] = phase;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
 } // namespace sse2
 
 namespace avx {
@@ -1674,6 +1747,79 @@ void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
         for (int in = 1; in < nins; in++)
             res += _mm256_load_ps(&ins[in][i * 8]);
         _mm256_stream_ps(&out[i * 8], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
+                        ChnParamFixed param)
+{
+    float inc_buf[] = {0, 1, 2, 3, 4, 5, 6, 7};
+    auto inc = _mm256_load_ps(inc_buf);
+    double phase = 0;
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 8) {
+            auto phase_v = float(phase) + inc * float(param.freq);
+            _mm256_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
+            phase += param.freq * 8;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                                const ChnParamFixed *params, unsigned nparams)
+{
+    float inc_buf[] = {0, 1, 2, 3, 4, 5, 6, 7};
+    auto inc = _mm256_load_ps(inc_buf);
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 8) {
+            auto v = _mm256_set1_ps(0);
+            for (unsigned c = 0; c < nparams; c++) {
+                auto phase = phases[c];
+                auto param = params[c];
+                auto phase_v = float(phase) + inc * float(param.freq);
+                v += float(param.amp) * sinpif_pi(phase_v);
+                phase += param.freq * 8;
+                phases[c] = phase;
+            }
+            _mm256_store_ps(&out[i], v);
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                                  const ChnParamFixed *params, unsigned nparams)
+{
+    float inc_buf[] = {0, 1, 2, 3, 4, 5, 6, 7};
+    auto inc = _mm256_load_ps(inc_buf);
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        auto phase = phases[0];
+        auto param = params[0];
+        for (unsigned i = 0; i < nsteps; i += 8) {
+            auto phase_v = float(phase) + inc * float(param.freq);
+            _mm256_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
+            phase += param.freq * 8;
+        }
+        phases[0] = phase;
+
+        for (unsigned c = 1; c < nparams; c++) {
+            auto phase = phases[c];
+            auto param = params[c];
+            for (unsigned i = 0; i < nsteps; i += 8) {
+                auto phase_v = float(phase) + inc * float(param.freq);
+                _mm256_store_ps(&out[i], _mm256_load_ps(&out[i]) +
+                                float(param.amp) * sinpif_pi(phase_v));
+                phase += param.freq * 8;
+            }
+            phases[c] = phase;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
     }
 }
 
@@ -1963,6 +2109,79 @@ void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
     }
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
+                        ChnParamFixed param)
+{
+    float inc_buf[] = {0, 1, 2, 3, 4, 5, 6, 7};
+    auto inc = _mm256_load_ps(inc_buf);
+    double phase = 0;
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 8) {
+            auto phase_v = float(phase) + inc * float(param.freq);
+            _mm256_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
+            phase += param.freq * 8;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                                const ChnParamFixed *params, unsigned nparams)
+{
+    float inc_buf[] = {0, 1, 2, 3, 4, 5, 6, 7};
+    auto inc = _mm256_load_ps(inc_buf);
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 8) {
+            auto v = _mm256_set1_ps(0);
+            for (unsigned c = 0; c < nparams; c++) {
+                auto phase = phases[c];
+                auto param = params[c];
+                auto phase_v = float(phase) + inc * float(param.freq);
+                v += float(param.amp) * sinpif_pi(phase_v);
+                phase += param.freq * 8;
+                phases[c] = phase;
+            }
+            _mm256_store_ps(&out[i], v);
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                                  const ChnParamFixed *params, unsigned nparams)
+{
+    float inc_buf[] = {0, 1, 2, 3, 4, 5, 6, 7};
+    auto inc = _mm256_load_ps(inc_buf);
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        auto phase = phases[0];
+        auto param = params[0];
+        for (unsigned i = 0; i < nsteps; i += 8) {
+            auto phase_v = float(phase) + inc * float(param.freq);
+            _mm256_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
+            phase += param.freq * 8;
+        }
+        phases[0] = phase;
+
+        for (unsigned c = 1; c < nparams; c++) {
+            auto phase = phases[c];
+            auto param = params[c];
+            for (unsigned i = 0; i < nsteps; i += 8) {
+                auto phase_v = float(phase) + inc * float(param.freq);
+                _mm256_store_ps(&out[i], _mm256_load_ps(&out[i]) +
+                                float(param.amp) * sinpif_pi(phase_v));
+                phase += param.freq * 8;
+            }
+            phases[c] = phase;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
 } // namespace avx2
 
 namespace avx512 {
@@ -2246,6 +2465,79 @@ void Kernel::sum_multi_nt(size_t nele, int nins, const float *ins[], float *out)
         for (int in = 1; in < nins; in++)
             res += _mm512_load_ps(&ins[in][i * 16]);
         _mm512_stream_ps(&out[i * 16], res);
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
+                        ChnParamFixed param)
+{
+    float inc_buf[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    auto inc = _mm512_load_ps(inc_buf);
+    double phase = 0;
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 16) {
+            auto phase_v = float(phase) + inc * float(param.freq);
+            _mm512_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
+            phase += param.freq * 16;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                                const ChnParamFixed *params, unsigned nparams)
+{
+    float inc_buf[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    auto inc = _mm512_load_ps(inc_buf);
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 16) {
+            auto v = _mm512_set1_ps(0);
+            for (unsigned c = 0; c < nparams; c++) {
+                auto phase = phases[c];
+                auto param = params[c];
+                auto phase_v = float(phase) + inc * float(param.freq);
+                v += float(param.amp) * sinpif_pi(phase_v);
+                phase += param.freq * 16;
+                phases[c] = phase;
+            }
+            _mm512_store_ps(&out[i], v);
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                                  const ChnParamFixed *params, unsigned nparams)
+{
+    float inc_buf[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    auto inc = _mm512_load_ps(inc_buf);
+    double phases[nparams] = {};
+    for (unsigned j = 0; j < nrep; j++) {
+        auto phase = phases[0];
+        auto param = params[0];
+        for (unsigned i = 0; i < nsteps; i += 16) {
+            auto phase_v = float(phase) + inc * float(param.freq);
+            _mm512_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
+            phase += param.freq * 16;
+        }
+        phases[0] = phase;
+
+        for (unsigned c = 1; c < nparams; c++) {
+            auto phase = phases[c];
+            auto param = params[c];
+            for (unsigned i = 0; i < nsteps; i += 16) {
+                auto phase_v = float(phase) + inc * float(param.freq);
+                _mm512_store_ps(&out[i], _mm512_load_ps(&out[i]) +
+                                float(param.amp) * sinpif_pi(phase_v));
+                phase += param.freq * 16;
+            }
+            phases[c] = phase;
+        }
+        asm volatile ("" :: "r"(out) : "memory");
     }
 }
 
