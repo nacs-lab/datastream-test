@@ -43,6 +43,13 @@ struct ChnParamFixed {
     double amp;
 };
 
+struct ChnParamMod {
+    double slope;
+    double v0;
+    double v1;
+    double v2;
+};
+
 namespace scalar {
 
 struct Kernel {
@@ -76,6 +83,12 @@ struct Kernel {
         auto u = -0.17818783f * s + 0.8098674f;
         u = u * s - 1.6448531f;
         return (s * d) * u + d;
+    }
+    static NACS_INLINE double ramp_func(double x, ChnParamMod param)
+    {
+        x = x * param.slope;
+        x = x - NaCs::round<int>(x);
+        return param.v0 + x * (param.v1 + x * param.v2);
     }
     NACS_EXPORT(ds_helper) static
     void sin_range(float *out, double start, double step, unsigned nsteps);
@@ -143,6 +156,12 @@ struct Kernel {
         auto u = -0.17818783f * s + 0.8098674f;
         u = u * s - 1.6448531f;
         return (s * d) * u + d;
+    }
+    static NACS_INLINE float64x2_t ramp_func(float64x2_t x, ChnParamMod param)
+    {
+        x = x * param.slope;
+        x = x - vcvtq_f64_s64(vcvtnq_s64_f64(x));
+        return param.v0 + x * (param.v1 + x * param.v2);
     }
     NACS_EXPORT(ds_helper) static
     void sin_range(float *out, double start, double step, unsigned nsteps);
@@ -212,6 +231,16 @@ struct Kernel {
         auto u = svmad_x(ptrue, svdup_f32(-0.17818783f), s, svdup_f32(0.8098674f));
         u = svmad_x(ptrue, u, s, svdup_f32(-1.6448531f));
         return svmad_x(ptrue, svmul_x(ptrue, s, d), u, d);
+    }
+    static NACS_INLINE __attribute__((target("+sve")))
+    svfloat64_t ramp_func(svfloat64_t x, ChnParamMod param)
+    {
+        auto ptrue = svptrue_b32();
+        x = svmul_x(ptrue, x, svdup_f64(param.slope));
+        x = svsub_x(ptrue, x, svrinta_x(ptrue, x));
+        return svmad_x(ptrue, svmad_x(ptrue, x, svdup_f64(param.v2),
+                                      svdup_f64(param.v1)),
+                       x, svdup_f64(param.v0));
     }
     NACS_EXPORT(ds_helper) static
     void sin_range(float *out, double start, double step, unsigned nsteps);
