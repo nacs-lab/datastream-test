@@ -30,7 +30,7 @@
 using namespace NaCs;
 using namespace CPUKernel;
 
-constexpr int max_params = 20;
+constexpr int max_params = 50;
 
 template<typename Kernel>
 static YAML::Node time_run(unsigned nrep, unsigned nsteps)
@@ -55,7 +55,7 @@ static YAML::Node time_run(unsigned nrep, unsigned nsteps)
     YAML::Node chn_loop(YAML::NodeType::Map);
     YAML::Node blk_loop(YAML::NodeType::Map);
 
-    for (int nparam: {1, 2, 5, 10, 20}) {
+    for (int nparam: {1, 2, 5, 10, 20, 50}) {
         Kernel::sin_multi_chn_loop(&buff[0], nsteps, 1, params, nparam);
         timer.restart();
         if (!Test::empty)
