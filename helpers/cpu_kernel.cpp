@@ -278,6 +278,10 @@ void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
         for (unsigned i = 0; i < nsteps; i++) {
             out[i] = float(param.amp) * sinpif_pi(float(phase));
             phase += param.freq;
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         asm volatile ("" :: "r"(out) : "memory");
     }
@@ -296,6 +300,10 @@ void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
                 auto param = params[c];
                 v += float(param.amp) * sinpif_pi(float(phase));
                 phase += param.freq;
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
                 phases[c] = phase;
             }
             out[i] = v;
@@ -315,6 +323,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
         for (unsigned i = 0; i < nsteps; i++) {
             out[i] = float(param.amp) * sinpif_pi(float(phase));
             phase += param.freq;
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         phases[0] = phase;
 
@@ -324,6 +336,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
             for (unsigned i = 0; i < nsteps; i++) {
                 out[i] += float(param.amp) * sinpif_pi(float(phase));
                 phase += param.freq;
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
             }
             phases[c] = phase;
         }
@@ -604,6 +620,10 @@ void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
             auto phase_v = float(phase) + inc * float(param.freq);
             vst1q_f32(&out[i], float(param.amp) * sinpif_pi(phase_v));
             phase += param.freq * 4;
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         asm volatile ("" :: "r"(out) : "memory");
     }
@@ -624,6 +644,10 @@ void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
                 auto phase_v = float(phase) + inc * float(param.freq);
                 v += float(param.amp) * sinpif_pi(phase_v);
                 phase += param.freq * 4;
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
                 phases[c] = phase;
             }
             vst1q_f32(&out[i], v);
@@ -645,6 +669,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
             auto phase_v = float(phase) + inc * float(param.freq);
             vst1q_f32(&out[i], float(param.amp) * sinpif_pi(phase_v));
             phase += param.freq * 4;
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         phases[0] = phase;
 
@@ -656,6 +684,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
                 vst1q_f32(&out[i], vld1q_f32(&out[i]) +
                           float(param.amp) * sinpif_pi(phase_v));
                 phase += param.freq * 4;
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
             }
             phases[c] = phase;
         }
@@ -1032,6 +1064,10 @@ void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
             vphase = svmad_x(ptrue, inc, vfreq, vphase);
             svst1(pg, &out[i], svmul_x(ptrue, vamp, sinpif_pi(vphase)));
             phase += param.freq * double(svelen);
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         asm volatile ("" :: "r"(out) : "memory");
     }
@@ -1060,6 +1096,10 @@ void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
                 vphase = svmad_x(ptrue, inc, vfreq, vphase);
                 v = svmad_x(ptrue, vamp, sinpif_pi(vphase), v);
                 phase += param.freq * double(svelen);
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
                 phases[c] = phase;
             }
             svst1(pg, &out[i], v);
@@ -1089,6 +1129,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
             vphase = svmad_x(ptrue, inc, vfreq, vphase);
             svst1(pg, &out[i], svmul_x(ptrue, vamp, sinpif_pi(vphase)));
             phase += param.freq * double(svelen);
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         phases[0] = phase;
 
@@ -1106,6 +1150,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
                                  svld1(pg, &out[i]));
                 svst1(pg, &out[i], v);
                 phase += param.freq * double(svelen);
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
             }
             phases[c] = phase;
         }
@@ -1412,6 +1460,10 @@ void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
             auto phase_v = float(phase) + inc * float(param.freq);
             _mm_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
             phase += param.freq * 4;
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         asm volatile ("" :: "r"(out) : "memory");
     }
@@ -1433,6 +1485,10 @@ void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
                 auto phase_v = float(phase) + inc * float(param.freq);
                 v += float(param.amp) * sinpif_pi(phase_v);
                 phase += param.freq * 4;
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
                 phases[c] = phase;
             }
             _mm_store_ps(&out[i], v);
@@ -1455,6 +1511,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
             auto phase_v = float(phase) + inc * float(param.freq);
             _mm_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
             phase += param.freq * 4;
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         phases[0] = phase;
 
@@ -1466,6 +1526,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
                 _mm_store_ps(&out[i], _mm_load_ps(&out[i]) +
                              float(param.amp) * sinpif_pi(phase_v));
                 phase += param.freq * 4;
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
             }
             phases[c] = phase;
         }
@@ -1771,6 +1835,10 @@ void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
             auto phase_v = float(phase) + inc * float(param.freq);
             _mm256_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
             phase += param.freq * 8;
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         asm volatile ("" :: "r"(out) : "memory");
     }
@@ -1792,6 +1860,10 @@ void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
                 auto phase_v = float(phase) + inc * float(param.freq);
                 v += float(param.amp) * sinpif_pi(phase_v);
                 phase += param.freq * 8;
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
                 phases[c] = phase;
             }
             _mm256_store_ps(&out[i], v);
@@ -1814,6 +1886,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
             auto phase_v = float(phase) + inc * float(param.freq);
             _mm256_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
             phase += param.freq * 8;
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         phases[0] = phase;
 
@@ -1825,6 +1901,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
                 _mm256_store_ps(&out[i], _mm256_load_ps(&out[i]) +
                                 float(param.amp) * sinpif_pi(phase_v));
                 phase += param.freq * 8;
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
             }
             phases[c] = phase;
         }
@@ -2130,6 +2210,10 @@ void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
             auto phase_v = float(phase) + inc * float(param.freq);
             _mm256_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
             phase += param.freq * 8;
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         asm volatile ("" :: "r"(out) : "memory");
     }
@@ -2151,6 +2235,10 @@ void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
                 auto phase_v = float(phase) + inc * float(param.freq);
                 v += float(param.amp) * sinpif_pi(phase_v);
                 phase += param.freq * 8;
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
                 phases[c] = phase;
             }
             _mm256_store_ps(&out[i], v);
@@ -2173,6 +2261,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
             auto phase_v = float(phase) + inc * float(param.freq);
             _mm256_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
             phase += param.freq * 8;
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         phases[0] = phase;
 
@@ -2184,6 +2276,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
                 _mm256_store_ps(&out[i], _mm256_load_ps(&out[i]) +
                                 float(param.amp) * sinpif_pi(phase_v));
                 phase += param.freq * 8;
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
             }
             phases[c] = phase;
         }
@@ -2306,7 +2402,7 @@ void Kernel::copy_nt(size_t nele, const int *in, int *out)
     asm volatile ("" : "+r"(nele), "+r"(in), "+r"(out) :: "memory");
     for (size_t i = 0; i < nele; i++)
         _mm512_stream_si512((__m512i*)&out[i * 16],
-                           _mm512_load_si512((const __m512i*)&in[i * 16]));
+                            _mm512_load_si512((const __m512i*)&in[i * 16]));
     asm volatile ("" :: "r"(out) : "memory");
 }
 
@@ -2489,6 +2585,10 @@ void Kernel::sin_single(float *out, unsigned nsteps, unsigned nrep,
             auto phase_v = float(phase) + inc * float(param.freq);
             _mm512_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
             phase += param.freq * 16;
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         asm volatile ("" :: "r"(out) : "memory");
     }
@@ -2510,6 +2610,10 @@ void Kernel::sin_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
                 auto phase_v = float(phase) + inc * float(param.freq);
                 v += float(param.amp) * sinpif_pi(phase_v);
                 phase += param.freq * 16;
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
                 phases[c] = phase;
             }
             _mm512_store_ps(&out[i], v);
@@ -2532,6 +2636,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
             auto phase_v = float(phase) + inc * float(param.freq);
             _mm512_store_ps(&out[i], float(param.amp) * sinpif_pi(phase_v));
             phase += param.freq * 16;
+            if (phase > 32) {
+                // assume positive frequency
+                phase -= 64;
+            }
         }
         phases[0] = phase;
 
@@ -2543,6 +2651,10 @@ void Kernel::sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
                 _mm512_store_ps(&out[i], _mm512_load_ps(&out[i]) +
                                 float(param.amp) * sinpif_pi(phase_v));
                 phase += param.freq * 16;
+                if (phase > 32) {
+                    // assume positive frequency
+                    phase -= 64;
+                }
             }
             phases[c] = phase;
         }

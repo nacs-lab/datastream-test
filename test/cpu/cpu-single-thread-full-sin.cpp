@@ -32,6 +32,59 @@ using namespace CPUKernel;
 
 constexpr int max_params = 50;
 
+static inline void check_value(float expect, float got, unsigned idx)
+{
+    auto diff = abs(expect - got);
+    auto avg = abs(expect + got) / 2;
+    if (diff <= 2e-3)
+        return;
+    if (diff <= 1e-3 * avg)
+        return;
+    printf("%d: expect: %f, got: %f\n", idx, expect, got);
+}
+
+template<typename Kernel>
+#if NACS_CPU_X86 || NACS_CPU_X86_64
+__attribute__((target_clones("default,avx,fma,avx512f")))
+#endif
+static void test_values(unsigned nrep, unsigned nsteps, int nparams,
+                        const CPUKernel::ChnParamFixed *params)
+{
+    std::vector<float> expects[nparams];
+    for (int c = 0; c < nparams; c++) {
+        expects[c] = std::vector<float>(nsteps);
+        auto &expect = expects[c];
+        auto param = params[c];
+        double phase = param.freq * nsteps * (nrep - 1);
+        while (phase > 32) {
+            phase -= 64;
+        }
+#pragma omp parallel for simd
+        for (unsigned i = 0; i < nsteps; i++) {
+            expect[i] = float(param.amp * sin(M_PI * (phase + i * param.freq)) / M_PI);
+        }
+    }
+
+    std::vector<float> buff(nsteps);
+    std::vector<float> expect2(nsteps, 0);
+    for (int c = 0; c < nparams; c++) {
+        auto &expect = expects[c];
+        Kernel::sin_single(&buff[0], nsteps, nrep, params[c]);
+        for (unsigned i = 0; i < nsteps; i++) {
+            expect2[i] += buff[i];
+            check_value(expect[i], buff[i], i);
+        }
+    }
+    Kernel::sin_multi_chn_loop(&buff[0], nsteps, nrep, params, nparams);
+    for (unsigned i = 0; i < nsteps; i++) {
+        check_value(expect2[i], buff[i], i);
+    }
+    Kernel::sin_multi_block_loop(&buff[0], nsteps, nrep, params, nparams);
+    for (unsigned i = 0; i < nsteps; i++) {
+        check_value(expect2[i], buff[i], i);
+    }
+}
+
 template<typename Kernel>
 static YAML::Node time_run(unsigned nrep, unsigned nsteps)
 {
@@ -41,6 +94,11 @@ static YAML::Node time_run(unsigned nrep, unsigned nsteps)
         params[i].freq = Gen::rand_single(0, 1);
         params[i].amp = Gen::rand_single(0, 1000);
     }
+    // Use a smaller repetition to make things go faster.
+    // This is a very rough value test anyway since we aren't
+    // paying much attention to the phase accumulation
+    test_values<Kernel>(1, nsteps, max_params, params);
+    test_values<Kernel>(3, nsteps, max_params, params);
 
     std::vector<float> buff(nsteps);
 
