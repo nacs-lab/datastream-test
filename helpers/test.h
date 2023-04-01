@@ -87,6 +87,51 @@ static NACS_INLINE uint64_t cycleclock()
 #endif
 }
 
+template<typename T, size_t align>
+class aligned_vector {
+public:
+    template<typename T2=T>
+    aligned_vector(size_t sz=0, T2 &&v=T{})
+        : m_ptr((T*)aligned_alloc(align, sz * sizeof(T))),
+          m_size(sz)
+    {
+        for (size_t i = 0; i < sz; i++) {
+            m_ptr[i] = v;
+        }
+    }
+    aligned_vector(const aligned_vector&) = delete;
+    aligned_vector(aligned_vector &&other)
+    {
+        *this = std::move(other);
+    }
+    aligned_vector &operator=(const aligned_vector&) = delete;
+    aligned_vector &operator=(aligned_vector &&other)
+    {
+        std::swap(m_ptr, other.m_ptr);
+        std::swap(m_size, other.m_size);
+    }
+    const T &operator[](size_t i) const
+    {
+        return m_ptr[i];
+    }
+    T &operator[](size_t i)
+    {
+        return m_ptr[i];
+    }
+    size_t size() const
+    {
+        return m_size;
+    }
+    ~aligned_vector()
+    {
+        free(m_ptr);
+    }
+
+private:
+    T *m_ptr;
+    size_t m_size;
+};
+
 }
 
 #endif

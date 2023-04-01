@@ -65,7 +65,7 @@ static void test_values(unsigned nrep, unsigned nsteps, int nparams,
         }
     }
 
-    std::vector<float> buff(nsteps);
+    Test::aligned_vector<float, 64> buff(nsteps);
     std::vector<float> expect2(nsteps, 0);
     for (int c = 0; c < nparams; c++) {
         auto &expect = expects[c];
@@ -100,7 +100,7 @@ static YAML::Node time_run(unsigned nrep, unsigned nsteps)
     test_values<Kernel>(1, nsteps, max_params, params);
     test_values<Kernel>(3, nsteps, max_params, params);
 
-    std::vector<float> buff(nsteps);
+    Test::aligned_vector<float, 64> buff(nsteps);
 
     Test::Timer timer;
 

@@ -63,7 +63,7 @@ static void test_values(unsigned nrep, unsigned nsteps, int nparams,
         }
     }
 
-    std::vector<float> buff(nsteps);
+    Test::aligned_vector<float, 64> buff(nsteps);
     for (int c = 0; c < nparams; c++) {
         auto &expect = expects[c];
         Kernel::sin_ramp_single(&buff[0], nsteps, nrep,
@@ -122,7 +122,7 @@ static YAML::Node time_run(unsigned nrep, unsigned nsteps)
     test_values<Kernel>(1, nsteps, max_params, amp_params, freq_params);
     test_values<Kernel>(3, nsteps, max_params, amp_params, freq_params);
 
-    std::vector<float> buff(nsteps);
+    Test::aligned_vector<float, 64> buff(nsteps);
 
     Test::Timer timer;
 
