@@ -1262,8 +1262,8 @@ void Kernel::sin_ramp_single_pbuf(float *out, unsigned nsteps, unsigned nrep,
     auto amp = ramp_func(float64x2_t{0, 0}, amp_param)[0];
     auto freq = ramp_func(float64x2_t{0, 0}, freq_param)[0];
     uint64_t t = 16;
-    double ampbuf[nsteps / 16];
-    double freqbuf[nsteps / 16];
+    double ampbuf[nsteps / 16] __attribute__((aligned(16)));
+    double freqbuf[nsteps / 16] __attribute__((aligned(16)));
     for (unsigned j = 0; j < nrep; j++) {
         for (unsigned i = 0; i < nsteps / 32; i++) {
             vst1q_f64(&ampbuf[i * 2], ramp_func(double(t) + pinc, amp_param));
@@ -1309,8 +1309,8 @@ void Kernel::sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigne
         amps[c] = ramp_func(float64x2_t{0, 0}, amp_params[c])[0];
         freqs[c] = ramp_func(float64x2_t{0, 0}, freq_params[c])[0];
     }
-    double ampbuf[nsteps / 16];
-    double freqbuf[nsteps / 16];
+    double ampbuf[nsteps / 16] __attribute__((aligned(16)));
+    double freqbuf[nsteps / 16] __attribute__((aligned(16)));
     uint64_t _t = 16;
     for (unsigned j = 0; j < nrep; j++) {
         auto chn_func = [&] (unsigned c) {
@@ -2446,8 +2446,8 @@ void Kernel::sin_ramp_single_pbuf(float *out, unsigned nsteps, unsigned nrep,
     auto amp = ramp_func(__m128d{0, 0}, amp_param)[0];
     auto freq = ramp_func(__m128d{0, 0}, freq_param)[0];
     uint64_t t = 16;
-    double ampbuf[nsteps / 16];
-    double freqbuf[nsteps / 16];
+    double ampbuf[nsteps / 16] __attribute__((aligned(16)));
+    double freqbuf[nsteps / 16] __attribute__((aligned(16)));
     for (unsigned j = 0; j < nrep; j++) {
         for (unsigned i = 0; i < nsteps / 32; i++) {
             _mm_store_pd(&ampbuf[i * 2], ramp_func(double(t) + pinc, amp_param));
@@ -2493,8 +2493,8 @@ void Kernel::sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigne
         amps[c] = ramp_func(__m128d{0, 0}, amp_params[c])[0];
         freqs[c] = ramp_func(__m128d{0, 0}, freq_params[c])[0];
     }
-    double ampbuf[nsteps / 16];
-    double freqbuf[nsteps / 16];
+    double ampbuf[nsteps / 16] __attribute__((aligned(16)));
+    double freqbuf[nsteps / 16] __attribute__((aligned(16)));
     uint64_t _t = 16;
     for (unsigned j = 0; j < nrep; j++) {
         auto chn_func = [&] (unsigned c) {
@@ -3163,8 +3163,8 @@ void Kernel::sin_ramp_single_pbuf(float *out, unsigned nsteps, unsigned nrep,
     auto amp = ramp_func(__m256d{0, 0, 0, 0}, amp_param)[0];
     auto freq = ramp_func(__m256d{0, 0, 0, 0}, freq_param)[0];
     uint64_t t = 16;
-    double ampbuf[nsteps / 16];
-    double freqbuf[nsteps / 16];
+    double ampbuf[nsteps / 16] __attribute__((aligned(32)));
+    double freqbuf[nsteps / 16] __attribute__((aligned(32)));
     for (unsigned j = 0; j < nrep; j++) {
         for (unsigned i = 0; i < nsteps / 64; i++) {
             _mm256_store_pd(&ampbuf[i * 4], ramp_func(double(t) + pinc, amp_param));
@@ -3210,8 +3210,8 @@ void Kernel::sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigne
         amps[c] = ramp_func(__m256d{0, 0, 0, 0}, amp_params[c])[0];
         freqs[c] = ramp_func(__m256d{0, 0, 0, 0}, freq_params[c])[0];
     }
-    double ampbuf[nsteps / 16];
-    double freqbuf[nsteps / 16];
+    double ampbuf[nsteps / 16] __attribute__((aligned(32)));
+    double freqbuf[nsteps / 16] __attribute__((aligned(32)));
     uint64_t _t = 16;
     for (unsigned j = 0; j < nrep; j++) {
         auto chn_func = [&] (unsigned c) __attribute__((target("avx"))) {
@@ -3882,8 +3882,8 @@ void Kernel::sin_ramp_single_pbuf(float *out, unsigned nsteps, unsigned nrep,
     auto amp = ramp_func(__m256d{0, 0, 0, 0}, amp_param)[0];
     auto freq = ramp_func(__m256d{0, 0, 0, 0}, freq_param)[0];
     uint64_t t = 16;
-    double ampbuf[nsteps / 16];
-    double freqbuf[nsteps / 16];
+    double ampbuf[nsteps / 16] __attribute__((aligned(32)));
+    double freqbuf[nsteps / 16] __attribute__((aligned(32)));
     for (unsigned j = 0; j < nrep; j++) {
         for (unsigned i = 0; i < nsteps / 64; i++) {
             _mm256_store_pd(&ampbuf[i * 4], ramp_func(double(t) + pinc, amp_param));
@@ -3929,8 +3929,8 @@ void Kernel::sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigne
         amps[c] = ramp_func(__m256d{0, 0, 0, 0}, amp_params[c])[0];
         freqs[c] = ramp_func(__m256d{0, 0, 0, 0}, freq_params[c])[0];
     }
-    double ampbuf[nsteps / 16];
-    double freqbuf[nsteps / 16];
+    double ampbuf[nsteps / 16] __attribute__((aligned(32)));
+    double freqbuf[nsteps / 16] __attribute__((aligned(32)));
     uint64_t _t = 16;
     for (unsigned j = 0; j < nrep; j++) {
         auto chn_func = [&] (unsigned c) __attribute__((target("avx2,fma"))) {
@@ -4594,8 +4594,8 @@ void Kernel::sin_ramp_single_pbuf(float *out, unsigned nsteps, unsigned nrep,
     auto amp = ramp_func(__m512d{0, 0, 0, 0, 0, 0, 0, 0}, amp_param)[0];
     auto freq = ramp_func(__m512d{0, 0, 0, 0, 0, 0, 0, 0}, freq_param)[0];
     uint64_t t = 16;
-    double ampbuf[nsteps / 16];
-    double freqbuf[nsteps / 16];
+    double ampbuf[nsteps / 16] __attribute__((aligned(64)));
+    double freqbuf[nsteps / 16] __attribute__((aligned(64)));
     for (unsigned j = 0; j < nrep; j++) {
         for (unsigned i = 0; i < nsteps / 128; i++) {
             _mm512_store_pd(&ampbuf[i * 8], ramp_func(double(t) + pinc, amp_param));
@@ -4639,8 +4639,8 @@ void Kernel::sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigne
         amps[c] = ramp_func(__m512d{0, 0, 0, 0, 0, 0, 0, 0}, amp_params[c])[0];
         freqs[c] = ramp_func(__m512d{0, 0, 0, 0, 0, 0, 0, 0}, freq_params[c])[0];
     }
-    double ampbuf[nsteps / 16];
-    double freqbuf[nsteps / 16];
+    double ampbuf[nsteps / 16] __attribute__((aligned(64)));
+    double freqbuf[nsteps / 16] __attribute__((aligned(64)));
     uint64_t _t = 16;
     for (unsigned j = 0; j < nrep; j++) {
         auto chn_func = [&] (unsigned c) __attribute__((target("avx512f,avx512dq"))) {
