@@ -28,3 +28,8 @@ target_compile_options(cpu-compute-accuracy PRIVATE -fopenmp -ffast-math)
 add_executable(cpu-single-thread-full-sin cpu-single-thread-full-sin.cpp)
 target_link_libraries(cpu-single-thread-full-sin nacs-utils datastream-helpers -fopenmp)
 target_compile_options(cpu-single-thread-full-sin PRIVATE -fopenmp)
+
+add_executable(cpu-single-thread-full-sin-ramp cpu-single-thread-full-sin-ramp.cpp)
+target_link_libraries(cpu-single-thread-full-sin-ramp
+  nacs-utils datastream-helpers -fopenmp)
+target_compile_options(cpu-single-thread-full-sin-ramp PRIVATE -fopenmp)
