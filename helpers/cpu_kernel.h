@@ -312,6 +312,13 @@ struct Kernel {
         u = u * s - 1.6448531f;
         return (s * d) * u + d;
     }
+    static NACS_INLINE __attribute__((target("sse2")))
+    __m128d ramp_func(__m128d x, ChnParamMod param)
+    {
+        x = x * param.slope;
+        x = x - _mm_cvtepi64_pd(_mm_cvtpd_epi64(x));
+        return param.v0 + x * (param.v1 + x * param.v2);
+    }
     NACS_EXPORT(ds_helper) static
     void sin_range(float *out, double start, double step, unsigned nsteps);
     NACS_EXPORT(ds_helper) static
@@ -384,6 +391,13 @@ struct Kernel {
         u = u * s - 1.6448531f;
         return (s * d) * u + d;
     }
+    static NACS_INLINE __attribute__((target("avx")))
+    __m256d ramp_func(__m256d x, ChnParamMod param)
+    {
+        x = x * param.slope;
+        x = x - _mm256_cvtepi64_pd(_mm256_cvtpd_epi64(x));
+        return param.v0 + x * (param.v1 + x * param.v2);
+    }
     NACS_EXPORT(ds_helper) static
     void sin_range(float *out, double start, double step, unsigned nsteps);
     NACS_EXPORT(ds_helper) static
@@ -451,6 +465,13 @@ struct Kernel {
         u = u * s - 1.6448531f;
         return (s * d) * u + d;
     }
+    static NACS_INLINE __attribute__((target("avx2,fma")))
+    __m256d ramp_func(__m256d x, ChnParamMod param)
+    {
+        x = x * param.slope;
+        x = x - _mm256_cvtepi64_pd(_mm256_cvtpd_epi64(x));
+        return param.v0 + x * (param.v1 + x * param.v2);
+    }
     NACS_EXPORT(ds_helper) static
     void sin_range(float *out, double start, double step, unsigned nsteps);
     NACS_EXPORT(ds_helper) static
@@ -517,6 +538,13 @@ struct Kernel {
         auto u = -0.17818783f * s + 0.8098674f;
         u = u * s - 1.6448531f;
         return (s * d) * u + d;
+    }
+    static NACS_INLINE __attribute__((target("avx512f,avx512dq")))
+    __m512d ramp_func(__m512d x, ChnParamMod param)
+    {
+        x = x * param.slope;
+        x = x - _mm512_cvtepi64_pd(_mm512_cvtpd_epi64(x));
+        return param.v0 + x * (param.v1 + x * param.v2);
     }
     NACS_EXPORT(ds_helper) static
     void sin_range(float *out, double start, double step, unsigned nsteps);
