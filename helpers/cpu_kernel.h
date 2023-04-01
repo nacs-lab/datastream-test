@@ -134,6 +134,30 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
                               const ChnParamFixed *params, unsigned nparams);
+
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single(float *out, unsigned nsteps, unsigned nrep,
+                         ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                                 const ChnParamMod *amp_params,
+                                 const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_chnblk_loop(float *out, unsigned nsteps, unsigned nrep,
+                                    const ChnParamMod *amp_params,
+                                    const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                                   const ChnParamMod *amp_params,
+                                   const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single_pbuf(float *out, unsigned nsteps, unsigned nrep,
+                              ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigned nrep,
+                                        const ChnParamMod *amp_params,
+                                        const ChnParamMod *freq_params,
+                                        unsigned nparams);
 };
 
 } // namespace scalar
@@ -207,6 +231,30 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
                               const ChnParamFixed *params, unsigned nparams);
+
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single(float *out, unsigned nsteps, unsigned nrep,
+                         ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                                 const ChnParamMod *amp_params,
+                                 const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_chnblk_loop(float *out, unsigned nsteps, unsigned nrep,
+                                    const ChnParamMod *amp_params,
+                                    const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                                   const ChnParamMod *amp_params,
+                                   const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single_pbuf(float *out, unsigned nsteps, unsigned nrep,
+                              ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigned nrep,
+                                        const ChnParamMod *amp_params,
+                                        const ChnParamMod *freq_params,
+                                        unsigned nparams);
 };
 
 } // namespace asimd
@@ -286,6 +334,31 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
                               const ChnParamFixed *params, unsigned nparams);
+
+    // I'm too lazy to implement most of these unless we actually need to use them...
+    static inline
+    void sin_ramp_single(float*, unsigned, unsigned, ChnParamMod, ChnParamMod)
+    {}
+    static inline
+    void sin_ramp_multi_chn_loop(float*, unsigned, unsigned,
+                                 const ChnParamMod*, const ChnParamMod*, unsigned)
+    {}
+    static inline
+    void sin_ramp_multi_chnblk_loop(float*, unsigned, unsigned,
+                                 const ChnParamMod*, const ChnParamMod*, unsigned)
+    {}
+    static inline
+    void sin_ramp_multi_block_loop(float*, unsigned, unsigned,
+                                   const ChnParamMod*, const ChnParamMod*, unsigned)
+    {}
+    static inline
+    void sin_ramp_single_pbuf(float*, unsigned, unsigned,
+                              ChnParamMod, ChnParamMod)
+    {}
+    static inline
+    void sin_ramp_multi_block_loop_pbuf(float*, unsigned, unsigned, const ChnParamMod*,
+                                        const ChnParamMod*, unsigned)
+    {}
 };
 
 } // namespace sve
