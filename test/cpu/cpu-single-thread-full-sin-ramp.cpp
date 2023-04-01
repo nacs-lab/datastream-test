@@ -76,6 +76,11 @@ static void test_values(unsigned nrep, unsigned nsteps, int nparams,
         for (unsigned i = 0; i < nsteps; i++) {
             check_value(expect[i], buff[i], i);
         }
+        Kernel::sin_ramp_single_pbuf_full(&buff[0], nsteps, nrep,
+                                          amp_params[c], freq_params[c]);
+        for (unsigned i = 0; i < nsteps; i++) {
+            check_value(expect[i], buff[i], i);
+        }
     }
     Kernel::sin_ramp_multi_chn_loop(&buff[0], nsteps, nrep,
                                     amp_params, freq_params, nparams);
@@ -139,10 +144,19 @@ static YAML::Node time_run(unsigned nrep, unsigned nsteps)
                                      amp_params[0], freq_params[0]);
     res["single_pbuf"] = timer.get_res(nrep, nsteps);
 
+    Kernel::sin_ramp_single_pbuf_full(&buff[0], nsteps, 1,
+                                      amp_params[0], freq_params[0]);
+    timer.restart();
+    if (!Test::empty)
+        Kernel::sin_ramp_single_pbuf_full(&buff[0], nsteps, nrep,
+                                          amp_params[0], freq_params[0]);
+    res["single_pbuf_full"] = timer.get_res(nrep, nsteps);
+
     YAML::Node chn_loop(YAML::NodeType::Map);
     YAML::Node chnblk_loop(YAML::NodeType::Map);
     YAML::Node blk_loop(YAML::NodeType::Map);
     YAML::Node blk_loop_pbuf(YAML::NodeType::Map);
+    YAML::Node blk_loop_pbuf_full(YAML::NodeType::Map);
 
     for (int nparam: {1, 2, 5, 10, 20, 50}) {
         Kernel::sin_ramp_multi_chn_loop(&buff[0], nsteps, 1,
@@ -176,12 +190,22 @@ static YAML::Node time_run(unsigned nrep, unsigned nsteps)
             Kernel::sin_ramp_multi_block_loop_pbuf(&buff[0], nsteps, nrep / nparam,
                                                    amp_params, freq_params, nparam);
         blk_loop_pbuf[std::to_string(nparam)] = timer.get_res(nrep / nparam, nsteps);
+
+        Kernel::sin_ramp_multi_block_loop_pbuf_full(&buff[0], nsteps, 1,
+                                                    amp_params, freq_params, nparam);
+        timer.restart();
+        if (!Test::empty)
+            Kernel::sin_ramp_multi_block_loop_pbuf_full(&buff[0], nsteps, nrep / nparam,
+                                                        amp_params, freq_params, nparam);
+        blk_loop_pbuf_full[std::to_string(nparam)] =
+            timer.get_res(nrep / nparam, nsteps);
     }
 
     res["chn_loop"] = chn_loop;
     res["chnblk_loop"] = chnblk_loop;
     res["blk_loop"] = blk_loop;
     res["blk_loop_pbuf"] = blk_loop_pbuf;
+    res["blk_loop_pbuf_full"] = blk_loop_pbuf_full;
 
     return res;
 }

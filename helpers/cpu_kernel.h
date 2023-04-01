@@ -158,6 +158,14 @@ struct Kernel {
                                         const ChnParamMod *amp_params,
                                         const ChnParamMod *freq_params,
                                         unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                   ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                             const ChnParamMod *amp_params,
+                                             const ChnParamMod *freq_params,
+                                             unsigned nparams);
 };
 
 } // namespace scalar
@@ -255,6 +263,14 @@ struct Kernel {
                                         const ChnParamMod *amp_params,
                                         const ChnParamMod *freq_params,
                                         unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                   ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                             const ChnParamMod *amp_params,
+                                             const ChnParamMod *freq_params,
+                                             unsigned nparams);
 };
 
 } // namespace asimd
@@ -359,6 +375,15 @@ struct Kernel {
     void sin_ramp_multi_block_loop_pbuf(float*, unsigned, unsigned, const ChnParamMod*,
                                         const ChnParamMod*, unsigned)
     {}
+    static inline
+    void sin_ramp_single_pbuf_full(float*, unsigned, unsigned,
+                                   ChnParamMod, ChnParamMod)
+    {}
+    static inline
+    void sin_ramp_multi_block_loop_pbuf_full(float*, unsigned, unsigned,
+                                             const ChnParamMod*,
+                                             const ChnParamMod*, unsigned)
+    {}
 };
 
 } // namespace sve
@@ -460,6 +485,14 @@ struct Kernel {
                                         const ChnParamMod *amp_params,
                                         const ChnParamMod *freq_params,
                                         unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                   ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                             const ChnParamMod *amp_params,
+                                             const ChnParamMod *freq_params,
+                                             unsigned nparams);
 };
 
 } // namespace sse2
@@ -563,6 +596,14 @@ struct Kernel {
                                         const ChnParamMod *amp_params,
                                         const ChnParamMod *freq_params,
                                         unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                   ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                             const ChnParamMod *amp_params,
+                                             const ChnParamMod *freq_params,
+                                             unsigned nparams);
 };
 
 } // namespace avx
@@ -661,6 +702,14 @@ struct Kernel {
                                         const ChnParamMod *amp_params,
                                         const ChnParamMod *freq_params,
                                         unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                   ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                             const ChnParamMod *amp_params,
+                                             const ChnParamMod *freq_params,
+                                             unsigned nparams);
 };
 
 } // namespace avx2
@@ -759,6 +808,14 @@ struct Kernel {
                                         const ChnParamMod *amp_params,
                                         const ChnParamMod *freq_params,
                                         unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                   ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                             const ChnParamMod *amp_params,
+                                             const ChnParamMod *freq_params,
+                                             unsigned nparams);
 };
 
 } // namespace avx512

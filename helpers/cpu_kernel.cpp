@@ -672,6 +672,110 @@ void Kernel::sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigne
     }
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sin_ramp_single_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                       ChnParamMod amp_param, ChnParamMod freq_param)
+{
+    double phase = 0;
+    double amp = ramp_func(0, amp_param);
+    double freq = ramp_func(0, freq_param);
+    uint64_t t = 16;
+    float ampbuf[nsteps];
+    float phasebuf[nsteps];
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 16) {
+            auto new_amp = ramp_func(double(t), amp_param);
+            auto new_freq = ramp_func(double(t), freq_param);
+            t += 16;
+            for (unsigned si = 0; si < 16; si++) {
+                ampbuf[i + si] = float(new_amp) * new_amp_coeff[si] +
+                    float(amp) * old_amp_coeff[si];
+                phasebuf[i + si] = float(phase) +
+                    float(new_freq) * new_freq_coeff[si] +
+                    float(freq) * old_freq_coeff[si];
+            }
+            phase = phase + (freq + new_freq) * 8;
+            freq = new_freq;
+            amp = new_amp;
+            if (phase > 32) {
+                phase -= 64;
+            }
+            else if (phase < -32) {
+                phase += 64;
+            }
+        }
+        for (unsigned i = 0; i < nsteps; i++) {
+            out[i] = ampbuf[i] * sinpif_pi(phasebuf[i]);
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sin_ramp_multi_block_loop_pbuf_full(
+    float *out, unsigned nsteps, unsigned nrep,
+    const ChnParamMod *amp_params, const ChnParamMod *freq_params, unsigned nparams)
+{
+    double phases[nparams] = {};
+    double freqs[nparams];
+    double amps[nparams];
+    for (unsigned c = 0; c < nparams; c++) {
+        amps[c] = ramp_func(0, amp_params[c]);
+        freqs[c] = ramp_func(0, freq_params[c]);
+    }
+    float ampbuf[nsteps];
+    float phasebuf[nsteps];
+    uint64_t _t = 16;
+    for (unsigned j = 0; j < nrep; j++) {
+        auto chn_func = [&] (unsigned c) {
+            auto t = _t;
+            auto amp_param = amp_params[c];
+            auto freq_param = freq_params[c];
+            auto amp = amps[c];
+            auto freq = freqs[c];
+            auto phase = phases[c];
+            for (unsigned i = 0; i < nsteps; i += 16) {
+                auto new_amp = ramp_func(double(t), amp_param);
+                auto new_freq = ramp_func(double(t), freq_param);
+                t += 16;
+                for (unsigned si = 0; si < 16; si++) {
+                    ampbuf[i + si] = float(new_amp) * new_amp_coeff[si] +
+                        float(amp) * old_amp_coeff[si];
+                    phasebuf[i + si] = float(phase) +
+                        float(new_freq) * new_freq_coeff[si] +
+                        float(freq) * old_freq_coeff[si];
+                }
+                phase = phase + (freq + new_freq) * 8;
+                freq = new_freq;
+                amp = new_amp;
+                if (phase > 32) {
+                    phase -= 64;
+                }
+                else if (phase < -32) {
+                    phase += 64;
+                }
+            }
+            amps[c] = amp;
+            freqs[c] = freq;
+            phases[c] = phase;
+            for (unsigned i = 0; i < nsteps; i++) {
+                if (c == 0) {
+                    out[i] = ampbuf[i] * sinpif_pi(phasebuf[i]);
+                }
+                else {
+                    out[i] += ampbuf[i] * sinpif_pi(phasebuf[i]);
+                }
+            }
+        };
+        // Encourage the compiler to specialize for c=0
+        chn_func(0);
+        for (unsigned c = 1; c < nparams; c++)
+            chn_func(c);
+        _t += nsteps;
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
 } // namespace scalar
 
 #if NACS_CPU_AARCH64
@@ -1352,6 +1456,120 @@ void Kernel::sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigne
             amps[c] = amp;
             freqs[c] = freq;
             phases[c] = phase;
+        };
+        // Encourage the compiler to specialize for c=0
+        chn_func(0);
+        for (unsigned c = 1; c < nparams; c++)
+            chn_func(c);
+        _t += nsteps;
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sin_ramp_single_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                       ChnParamMod amp_param, ChnParamMod freq_param)
+{
+    float64x2_t pinc{0, 16};
+
+    double phase = 0;
+    auto amp = ramp_func(float64x2_t{0, 0}, amp_param)[0];
+    auto freq = ramp_func(float64x2_t{0, 0}, freq_param)[0];
+    uint64_t t = 16;
+    float ampbuf[nsteps] __attribute__((aligned(16)));
+    float phasebuf[nsteps] __attribute__((aligned(16)));
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 32) {
+            auto new_amp = ramp_func(double(t) + pinc, amp_param);
+            auto new_freq = ramp_func(double(t) + pinc, freq_param);
+            t += 32;
+            for (unsigned pi = 0; pi < 2; pi++) {
+                for (unsigned si = 0; si < 4; si++) {
+                    auto a = float(new_amp[pi]) * new_amp_coeff[si] +
+                        float(amp) * old_amp_coeff[si];
+                    auto p = float(phase) +
+                        float(new_freq[pi]) * new_freq_coeff[si] +
+                        float(freq) * old_freq_coeff[si];
+                    vst1q_f32(&ampbuf[i + pi * 16 + si * 4], a);
+                    vst1q_f32(&phasebuf[i + pi * 16 + si * 4], p);
+                }
+                phase = phase + (freq + new_freq[pi]) * 8;
+                freq = new_freq[pi];
+                amp = new_amp[pi];
+                if (phase > 32) {
+                    phase -= 64;
+                }
+                else if (phase < -32) {
+                    phase += 64;
+                }
+            }
+        }
+        for (unsigned i = 0; i < nsteps; i += 4) {
+            vst1q_f32(&out[i], vld1q_f32(&ampbuf[i]) *
+                      sinpif_pi(vld1q_f32(&phasebuf[i])));
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((flatten))
+void Kernel::sin_ramp_multi_block_loop_pbuf_full(
+    float *out, unsigned nsteps, unsigned nrep,
+    const ChnParamMod *amp_params, const ChnParamMod *freq_params, unsigned nparams)
+{
+    float64x2_t pinc{0, 16};
+    double phases[nparams] = {};
+    double freqs[nparams];
+    double amps[nparams];
+    for (unsigned c = 0; c < nparams; c++) {
+        amps[c] = ramp_func(float64x2_t{0, 0}, amp_params[c])[0];
+        freqs[c] = ramp_func(float64x2_t{0, 0}, freq_params[c])[0];
+    }
+    float ampbuf[nsteps] __attribute__((aligned(16)));
+    float phasebuf[nsteps] __attribute__((aligned(16)));
+    uint64_t _t = 16;
+    for (unsigned j = 0; j < nrep; j++) {
+        auto chn_func = [&] (unsigned c) {
+            auto t = _t;
+            auto amp_param = amp_params[c];
+            auto freq_param = freq_params[c];
+            auto amp = amps[c];
+            auto freq = freqs[c];
+            auto phase = phases[c];
+            for (unsigned i = 0; i < nsteps; i += 32) {
+                auto new_amp = ramp_func(double(t) + pinc, amp_param);
+                auto new_freq = ramp_func(double(t) + pinc, freq_param);
+                t += 32;
+                for (unsigned pi = 0; pi < 2; pi++) {
+                    for (unsigned si = 0; si < 4; si++) {
+                        auto a = float(new_amp[pi]) * new_amp_coeff[si] +
+                            float(amp) * old_amp_coeff[si];
+                        auto p = float(phase) +
+                            float(new_freq[pi]) * new_freq_coeff[si] +
+                            float(freq) * old_freq_coeff[si];
+                        vst1q_f32(&ampbuf[i + pi * 16 + si * 4], a);
+                        vst1q_f32(&phasebuf[i + pi * 16 + si * 4], p);
+                    }
+                    phase = phase + (freq + new_freq[pi]) * 8;
+                    freq = new_freq[pi];
+                    amp = new_amp[pi];
+                    if (phase > 32) {
+                        phase -= 64;
+                    }
+                    else if (phase < -32) {
+                        phase += 64;
+                    }
+                }
+            }
+            amps[c] = amp;
+            freqs[c] = freq;
+            phases[c] = phase;
+            for (unsigned i = 0; i < nsteps; i += 4) {
+                auto v = vld1q_f32(&ampbuf[i]) * sinpif_pi(vld1q_f32(&phasebuf[i]));
+                if (c != 0)
+                    v += vld1q_f32(&out[i]);
+                vst1q_f32(&out[i], v);
+            }
         };
         // Encourage the compiler to specialize for c=0
         chn_func(0);
@@ -2546,6 +2764,120 @@ void Kernel::sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigne
     }
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::sin_ramp_single_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                       ChnParamMod amp_param, ChnParamMod freq_param)
+{
+    __m128d pinc{0, 16};
+
+    double phase = 0;
+    auto amp = ramp_func(__m128d{0, 0}, amp_param)[0];
+    auto freq = ramp_func(__m128d{0, 0}, freq_param)[0];
+    uint64_t t = 16;
+    float ampbuf[nsteps] __attribute__((aligned(16)));
+    float phasebuf[nsteps] __attribute__((aligned(16)));
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 32) {
+            auto new_amp = ramp_func(double(t) + pinc, amp_param);
+            auto new_freq = ramp_func(double(t) + pinc, freq_param);
+            t += 32;
+            for (unsigned pi = 0; pi < 2; pi++) {
+                for (unsigned si = 0; si < 4; si++) {
+                    auto a = float(new_amp[pi]) * new_amp_coeff[si] +
+                        float(amp) * old_amp_coeff[si];
+                    auto p = float(phase) +
+                        float(new_freq[pi]) * new_freq_coeff[si] +
+                        float(freq) * old_freq_coeff[si];
+                    _mm_store_ps(&ampbuf[i + pi * 16 + si * 4], a);
+                    _mm_store_ps(&phasebuf[i + pi * 16 + si * 4], p);
+                }
+                phase = phase + (freq + new_freq[pi]) * 8;
+                freq = new_freq[pi];
+                amp = new_amp[pi];
+                if (phase > 32) {
+                    phase -= 64;
+                }
+                else if (phase < -32) {
+                    phase += 64;
+                }
+            }
+        }
+        for (unsigned i = 0; i < nsteps; i += 4) {
+            _mm_store_ps(&out[i], _mm_load_ps(&ampbuf[i]) *
+                         sinpif_pi(_mm_load_ps(&phasebuf[i])));
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("sse2"),flatten))
+void Kernel::sin_ramp_multi_block_loop_pbuf_full(
+    float *out, unsigned nsteps, unsigned nrep,
+    const ChnParamMod *amp_params, const ChnParamMod *freq_params, unsigned nparams)
+{
+    __m128d pinc{0, 16};
+    double phases[nparams] = {};
+    double freqs[nparams];
+    double amps[nparams];
+    for (unsigned c = 0; c < nparams; c++) {
+        amps[c] = ramp_func(__m128d{0, 0}, amp_params[c])[0];
+        freqs[c] = ramp_func(__m128d{0, 0}, freq_params[c])[0];
+    }
+    float ampbuf[nsteps] __attribute__((aligned(16)));
+    float phasebuf[nsteps] __attribute__((aligned(16)));
+    uint64_t _t = 16;
+    for (unsigned j = 0; j < nrep; j++) {
+        auto chn_func = [&] (unsigned c) {
+            auto t = _t;
+            auto amp_param = amp_params[c];
+            auto freq_param = freq_params[c];
+            auto amp = amps[c];
+            auto freq = freqs[c];
+            auto phase = phases[c];
+            for (unsigned i = 0; i < nsteps; i += 32) {
+                auto new_amp = ramp_func(double(t) + pinc, amp_param);
+                auto new_freq = ramp_func(double(t) + pinc, freq_param);
+                t += 32;
+                for (unsigned pi = 0; pi < 2; pi++) {
+                    for (unsigned si = 0; si < 4; si++) {
+                        auto a = float(new_amp[pi]) * new_amp_coeff[si] +
+                            float(amp) * old_amp_coeff[si];
+                        auto p = float(phase) +
+                            float(new_freq[pi]) * new_freq_coeff[si] +
+                            float(freq) * old_freq_coeff[si];
+                        _mm_store_ps(&ampbuf[i + pi * 16 + si * 4], a);
+                        _mm_store_ps(&phasebuf[i + pi * 16 + si * 4], p);
+                    }
+                    phase = phase + (freq + new_freq[pi]) * 8;
+                    freq = new_freq[pi];
+                    amp = new_amp[pi];
+                    if (phase > 32) {
+                        phase -= 64;
+                    }
+                    else if (phase < -32) {
+                        phase += 64;
+                    }
+                }
+            }
+            amps[c] = amp;
+            freqs[c] = freq;
+            phases[c] = phase;
+            for (unsigned i = 0; i < nsteps; i += 4) {
+                auto v = _mm_load_ps(&ampbuf[i]) * sinpif_pi(_mm_load_ps(&phasebuf[i]));
+                if (c != 0)
+                    v += _mm_load_ps(&out[i]);
+                _mm_store_ps(&out[i], v);
+            }
+        };
+        // Encourage the compiler to specialize for c=0
+        chn_func(0);
+        for (unsigned c = 1; c < nparams; c++)
+            chn_func(c);
+        _t += nsteps;
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
 } // namespace sse2
 
 namespace avx {
@@ -3255,6 +3587,121 @@ void Kernel::sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigne
             amps[c] = amp;
             freqs[c] = freq;
             phases[c] = phase;
+        };
+        // Encourage the compiler to specialize for c=0
+        chn_func(0);
+        for (unsigned c = 1; c < nparams; c++)
+            chn_func(c);
+        _t += nsteps;
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::sin_ramp_single_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                       ChnParamMod amp_param, ChnParamMod freq_param)
+{
+    __m256d pinc{0, 16, 32, 48};
+
+    double phase = 0;
+    auto amp = ramp_func(__m256d{0, 0, 0, 0}, amp_param)[0];
+    auto freq = ramp_func(__m256d{0, 0, 0, 0}, freq_param)[0];
+    uint64_t t = 16;
+    float ampbuf[nsteps] __attribute__((aligned(32)));
+    float phasebuf[nsteps] __attribute__((aligned(32)));
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 64) {
+            auto new_amp = ramp_func(double(t) + pinc, amp_param);
+            auto new_freq = ramp_func(double(t) + pinc, freq_param);
+            t += 64;
+            for (unsigned pi = 0; pi < 4; pi++) {
+                for (unsigned si = 0; si < 2; si++) {
+                    auto a = float(new_amp[pi]) * new_amp_coeff[si] +
+                        float(amp) * old_amp_coeff[si];
+                    auto p = float(phase) +
+                        float(new_freq[pi]) * new_freq_coeff[si] +
+                        float(freq) * old_freq_coeff[si];
+                    _mm256_store_ps(&ampbuf[i + pi * 16 + si * 8], a);
+                    _mm256_store_ps(&phasebuf[i + pi * 16 + si * 8], p);
+                }
+                phase = phase + (freq + new_freq[pi]) * 8;
+                freq = new_freq[pi];
+                amp = new_amp[pi];
+                if (phase > 32) {
+                    phase -= 64;
+                }
+                else if (phase < -32) {
+                    phase += 64;
+                }
+            }
+        }
+        for (unsigned i = 0; i < nsteps; i += 8) {
+            _mm256_store_ps(&out[i], _mm256_load_ps(&ampbuf[i]) *
+                            sinpif_pi(_mm256_load_ps(&phasebuf[i])));
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx"),flatten))
+void Kernel::sin_ramp_multi_block_loop_pbuf_full(
+    float *out, unsigned nsteps, unsigned nrep,
+    const ChnParamMod *amp_params, const ChnParamMod *freq_params, unsigned nparams)
+{
+    __m256d pinc{0, 16, 32, 48};
+    double phases[nparams] = {};
+    double freqs[nparams];
+    double amps[nparams];
+    for (unsigned c = 0; c < nparams; c++) {
+        amps[c] = ramp_func(__m256d{0, 0, 0, 0}, amp_params[c])[0];
+        freqs[c] = ramp_func(__m256d{0, 0, 0, 0}, freq_params[c])[0];
+    }
+    float ampbuf[nsteps] __attribute__((aligned(32)));
+    float phasebuf[nsteps] __attribute__((aligned(32)));
+    uint64_t _t = 16;
+    for (unsigned j = 0; j < nrep; j++) {
+        auto chn_func = [&] (unsigned c) __attribute__((target("avx"))) {
+            auto t = _t;
+            auto amp_param = amp_params[c];
+            auto freq_param = freq_params[c];
+            auto amp = amps[c];
+            auto freq = freqs[c];
+            auto phase = phases[c];
+            for (unsigned i = 0; i < nsteps; i += 64) {
+                auto new_amp = ramp_func(double(t) + pinc, amp_param);
+                auto new_freq = ramp_func(double(t) + pinc, freq_param);
+                t += 64;
+                for (unsigned pi = 0; pi < 4; pi++) {
+                    for (unsigned si = 0; si < 2; si++) {
+                        auto a = float(new_amp[pi]) * new_amp_coeff[si] +
+                            float(amp) * old_amp_coeff[si];
+                        auto p = float(phase) +
+                            float(new_freq[pi]) * new_freq_coeff[si] +
+                            float(freq) * old_freq_coeff[si];
+                        _mm256_store_ps(&ampbuf[i + pi * 16 + si * 8], a);
+                        _mm256_store_ps(&phasebuf[i + pi * 16 + si * 8], p);
+                    }
+                    phase = phase + (freq + new_freq[pi]) * 8;
+                    freq = new_freq[pi];
+                    amp = new_amp[pi];
+                    if (phase > 32) {
+                        phase -= 64;
+                    }
+                    else if (phase < -32) {
+                        phase += 64;
+                    }
+                }
+            }
+            amps[c] = amp;
+            freqs[c] = freq;
+            phases[c] = phase;
+            for (unsigned i = 0; i < nsteps; i += 8) {
+                auto v = _mm256_load_ps(&ampbuf[i]) *
+                    sinpif_pi(_mm256_load_ps(&phasebuf[i]));
+                if (c != 0)
+                    v += _mm256_load_ps(&out[i]);
+                _mm256_store_ps(&out[i], v);
+            }
         };
         // Encourage the compiler to specialize for c=0
         chn_func(0);
@@ -3984,6 +4431,121 @@ void Kernel::sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigne
     }
 }
 
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::sin_ramp_single_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                       ChnParamMod amp_param, ChnParamMod freq_param)
+{
+    __m256d pinc{0, 16, 32, 48};
+
+    double phase = 0;
+    auto amp = ramp_func(__m256d{0, 0, 0, 0}, amp_param)[0];
+    auto freq = ramp_func(__m256d{0, 0, 0, 0}, freq_param)[0];
+    uint64_t t = 16;
+    float ampbuf[nsteps] __attribute__((aligned(32)));
+    float phasebuf[nsteps] __attribute__((aligned(32)));
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 64) {
+            auto new_amp = ramp_func(double(t) + pinc, amp_param);
+            auto new_freq = ramp_func(double(t) + pinc, freq_param);
+            t += 64;
+            for (unsigned pi = 0; pi < 4; pi++) {
+                for (unsigned si = 0; si < 2; si++) {
+                    auto a = float(new_amp[pi]) * new_amp_coeff[si] +
+                        float(amp) * old_amp_coeff[si];
+                    auto p = float(phase) +
+                        float(new_freq[pi]) * new_freq_coeff[si] +
+                        float(freq) * old_freq_coeff[si];
+                    _mm256_store_ps(&ampbuf[i + pi * 16 + si * 8], a);
+                    _mm256_store_ps(&phasebuf[i + pi * 16 + si * 8], p);
+                }
+                phase = phase + (freq + new_freq[pi]) * 8;
+                freq = new_freq[pi];
+                amp = new_amp[pi];
+                if (phase > 32) {
+                    phase -= 64;
+                }
+                else if (phase < -32) {
+                    phase += 64;
+                }
+            }
+        }
+        for (unsigned i = 0; i < nsteps; i += 8) {
+            _mm256_store_ps(&out[i], _mm256_load_ps(&ampbuf[i]) *
+                            sinpif_pi(_mm256_load_ps(&phasebuf[i])));
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx2,fma"),flatten))
+void Kernel::sin_ramp_multi_block_loop_pbuf_full(
+    float *out, unsigned nsteps, unsigned nrep,
+    const ChnParamMod *amp_params, const ChnParamMod *freq_params, unsigned nparams)
+{
+    __m256d pinc{0, 16, 32, 48};
+    double phases[nparams] = {};
+    double freqs[nparams];
+    double amps[nparams];
+    for (unsigned c = 0; c < nparams; c++) {
+        amps[c] = ramp_func(__m256d{0, 0, 0, 0}, amp_params[c])[0];
+        freqs[c] = ramp_func(__m256d{0, 0, 0, 0}, freq_params[c])[0];
+    }
+    float ampbuf[nsteps] __attribute__((aligned(32)));
+    float phasebuf[nsteps] __attribute__((aligned(32)));
+    uint64_t _t = 16;
+    for (unsigned j = 0; j < nrep; j++) {
+        auto chn_func = [&] (unsigned c) __attribute__((target("avx2,fma"))) {
+            auto t = _t;
+            auto amp_param = amp_params[c];
+            auto freq_param = freq_params[c];
+            auto amp = amps[c];
+            auto freq = freqs[c];
+            auto phase = phases[c];
+            for (unsigned i = 0; i < nsteps; i += 64) {
+                auto new_amp = ramp_func(double(t) + pinc, amp_param);
+                auto new_freq = ramp_func(double(t) + pinc, freq_param);
+                t += 64;
+                for (unsigned pi = 0; pi < 4; pi++) {
+                    for (unsigned si = 0; si < 2; si++) {
+                        auto a = float(new_amp[pi]) * new_amp_coeff[si] +
+                            float(amp) * old_amp_coeff[si];
+                        auto p = float(phase) +
+                            float(new_freq[pi]) * new_freq_coeff[si] +
+                            float(freq) * old_freq_coeff[si];
+                        _mm256_store_ps(&ampbuf[i + pi * 16 + si * 8], a);
+                        _mm256_store_ps(&phasebuf[i + pi * 16 + si * 8], p);
+                    }
+                    phase = phase + (freq + new_freq[pi]) * 8;
+                    freq = new_freq[pi];
+                    amp = new_amp[pi];
+                    if (phase > 32) {
+                        phase -= 64;
+                    }
+                    else if (phase < -32) {
+                        phase += 64;
+                    }
+                }
+            }
+            amps[c] = amp;
+            freqs[c] = freq;
+            phases[c] = phase;
+            for (unsigned i = 0; i < nsteps; i += 8) {
+                auto v = _mm256_load_ps(&ampbuf[i]) *
+                    sinpif_pi(_mm256_load_ps(&phasebuf[i]));
+                if (c != 0)
+                    v += _mm256_load_ps(&out[i]);
+                _mm256_store_ps(&out[i], v);
+            }
+        };
+        // Encourage the compiler to specialize for c=0
+        chn_func(0);
+        for (unsigned c = 1; c < nparams; c++)
+            chn_func(c);
+        _t += nsteps;
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
 } // namespace avx2
 
 namespace avx512 {
@@ -4682,6 +5244,117 @@ void Kernel::sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigne
             amps[c] = amp;
             freqs[c] = freq;
             phases[c] = phase;
+        };
+        // Encourage the compiler to specialize for c=0
+        chn_func(0);
+        for (unsigned c = 1; c < nparams; c++)
+            chn_func(c);
+        _t += nsteps;
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::sin_ramp_single_pbuf_full(float *out, unsigned nsteps, unsigned nrep,
+                                       ChnParamMod amp_param, ChnParamMod freq_param)
+{
+    __m512d pinc{0, 16, 32, 48, 64, 80, 96, 112};
+
+    double phase = 0;
+    auto amp = ramp_func(__m512d{0, 0, 0, 0, 0, 0, 0, 0}, amp_param)[0];
+    auto freq = ramp_func(__m512d{0, 0, 0, 0, 0, 0, 0, 0}, freq_param)[0];
+    uint64_t t = 16;
+    float ampbuf[nsteps] __attribute__((aligned(64)));
+    float phasebuf[nsteps] __attribute__((aligned(64)));
+    for (unsigned j = 0; j < nrep; j++) {
+        for (unsigned i = 0; i < nsteps; i += 128) {
+            auto new_amp = ramp_func(double(t) + pinc, amp_param);
+            auto new_freq = ramp_func(double(t) + pinc, freq_param);
+            t += 128;
+            for (unsigned pi = 0; pi < 8; pi++) {
+                auto a = float(new_amp[pi]) * new_amp_coeff +
+                    float(amp) * old_amp_coeff;
+                auto p = float(phase) +
+                    float(new_freq[pi]) * new_freq_coeff +
+                    float(freq) * old_freq_coeff;
+                _mm512_store_ps(&ampbuf[i + pi * 16], a);
+                _mm512_store_ps(&phasebuf[i + pi * 16], p);
+                phase = phase + (freq + new_freq[pi]) * 8;
+                freq = new_freq[pi];
+                amp = new_amp[pi];
+                if (phase > 32) {
+                    phase -= 64;
+                }
+                else if (phase < -32) {
+                    phase += 64;
+                }
+            }
+        }
+        for (unsigned i = 0; i < nsteps; i += 16) {
+            _mm512_store_ps(&out[i], _mm512_load_ps(&ampbuf[i]) *
+                            sinpif_pi(_mm512_load_ps(&phasebuf[i])));
+        }
+        asm volatile ("" :: "r"(out) : "memory");
+    }
+}
+
+NACS_EXPORT() NACS_NOINLINE __attribute__((target("avx512f,avx512dq"),flatten))
+void Kernel::sin_ramp_multi_block_loop_pbuf_full(
+    float *out, unsigned nsteps, unsigned nrep,
+    const ChnParamMod *amp_params, const ChnParamMod *freq_params, unsigned nparams)
+{
+    __m512d pinc{0, 16, 32, 48, 64, 80, 96, 112};
+    double phases[nparams] = {};
+    double freqs[nparams];
+    double amps[nparams];
+    for (unsigned c = 0; c < nparams; c++) {
+        amps[c] = ramp_func(__m512d{0, 0, 0, 0, 0, 0, 0, 0}, amp_params[c])[0];
+        freqs[c] = ramp_func(__m512d{0, 0, 0, 0, 0, 0, 0, 0}, freq_params[c])[0];
+    }
+    float ampbuf[nsteps] __attribute__((aligned(64)));
+    float phasebuf[nsteps] __attribute__((aligned(64)));
+    uint64_t _t = 16;
+    for (unsigned j = 0; j < nrep; j++) {
+        auto chn_func = [&] (unsigned c) __attribute__((target("avx512f,avx512dq"))) {
+            auto t = _t;
+            auto amp_param = amp_params[c];
+            auto freq_param = freq_params[c];
+            auto amp = amps[c];
+            auto freq = freqs[c];
+            auto phase = phases[c];
+            for (unsigned i = 0; i < nsteps; i += 128) {
+                auto new_amp = ramp_func(double(t) + pinc, amp_param);
+                auto new_freq = ramp_func(double(t) + pinc, freq_param);
+                t += 128;
+                for (unsigned pi = 0; pi < 8; pi++) {
+                    auto a = float(new_amp[pi]) * new_amp_coeff +
+                        float(amp) * old_amp_coeff;
+                    auto p = float(phase) +
+                        float(new_freq[pi]) * new_freq_coeff +
+                        float(freq) * old_freq_coeff;
+                    _mm512_store_ps(&ampbuf[i + pi * 16], a);
+                    _mm512_store_ps(&phasebuf[i + pi * 16], p);
+                    phase = phase + (freq + new_freq[pi]) * 8;
+                    freq = new_freq[pi];
+                    amp = new_amp[pi];
+                    if (phase > 32) {
+                        phase -= 64;
+                    }
+                    else if (phase < -32) {
+                        phase += 64;
+                    }
+                }
+            }
+            amps[c] = amp;
+            freqs[c] = freq;
+            phases[c] = phase;
+            for (unsigned i = 0; i < nsteps; i += 16) {
+                auto v = _mm512_load_ps(&ampbuf[i]) *
+                    sinpif_pi(_mm512_load_ps(&phasebuf[i]));
+                if (c != 0)
+                    v += _mm512_load_ps(&out[i]);
+                _mm512_store_ps(&out[i], v);
+            }
         };
         // Encourage the compiler to specialize for c=0
         chn_func(0);
