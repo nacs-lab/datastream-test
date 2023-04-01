@@ -30,6 +30,4 @@ target_link_libraries(cpu-single-thread-full-sin nacs-utils datastream-helpers -
 target_compile_options(cpu-single-thread-full-sin PRIVATE -fopenmp)
 
 add_executable(cpu-single-thread-full-sin-ramp cpu-single-thread-full-sin-ramp.cpp)
-target_link_libraries(cpu-single-thread-full-sin-ramp
-  nacs-utils datastream-helpers -fopenmp)
-target_compile_options(cpu-single-thread-full-sin-ramp PRIVATE -fopenmp)
+target_link_libraries(cpu-single-thread-full-sin-ramp nacs-utils datastream-helpers)

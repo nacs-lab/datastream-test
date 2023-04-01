@@ -32,6 +32,73 @@ using namespace CPUKernel;
 
 constexpr int max_params = 50;
 
+static inline void check_value(float expect, float got, unsigned idx)
+{
+    auto diff = abs(expect - got);
+    auto avg = abs(expect + got) / 2;
+    if (diff <= 2e-5)
+        return;
+    if (diff <= 1e-5 * avg)
+        return;
+    printf("%d: expect: %f, got: %f\n", idx, expect, got);
+}
+
+template<typename Kernel>
+#if NACS_CPU_X86 || NACS_CPU_X86_64
+__attribute__((target_clones("default,avx,fma,avx512f")))
+#endif
+static void test_values(unsigned nrep, unsigned nsteps, int nparams,
+                        const CPUKernel::ChnParamMod *amp_params,
+                        const CPUKernel::ChnParamMod *freq_params)
+{
+    std::vector<float> expects[nparams];
+    std::vector<float> expect2(nsteps, 0);
+    for (int c = 0; c < nparams; c++) {
+        expects[c] = std::vector<float>(nsteps);
+        auto &expect = expects[c];
+        scalar::Kernel::sin_ramp_single(&expect[0], nsteps, nrep,
+                                        amp_params[c], freq_params[c]);
+        for (unsigned i = 0; i < nsteps; i++) {
+            expect2[i] += expect[i];
+        }
+    }
+
+    std::vector<float> buff(nsteps);
+    for (int c = 0; c < nparams; c++) {
+        auto &expect = expects[c];
+        Kernel::sin_ramp_single(&buff[0], nsteps, nrep,
+                                amp_params[c], freq_params[c]);
+        for (unsigned i = 0; i < nsteps; i++) {
+            check_value(expect[i], buff[i], i);
+        }
+        Kernel::sin_ramp_single_pbuf(&buff[0], nsteps, nrep,
+                                     amp_params[c], freq_params[c]);
+        for (unsigned i = 0; i < nsteps; i++) {
+            check_value(expect[i], buff[i], i);
+        }
+    }
+    Kernel::sin_ramp_multi_chn_loop(&buff[0], nsteps, nrep,
+                                    amp_params, freq_params, nparams);
+    for (unsigned i = 0; i < nsteps; i++) {
+        check_value(expect2[i], buff[i], i);
+    }
+    Kernel::sin_ramp_multi_chnblk_loop(&buff[0], nsteps, nrep,
+                                       amp_params, freq_params, nparams);
+    for (unsigned i = 0; i < nsteps; i++) {
+        check_value(expect2[i], buff[i], i);
+    }
+    Kernel::sin_ramp_multi_block_loop(&buff[0], nsteps, nrep,
+                                      amp_params, freq_params, nparams);
+    for (unsigned i = 0; i < nsteps; i++) {
+        check_value(expect2[i], buff[i], i);
+    }
+    Kernel::sin_ramp_multi_block_loop_pbuf(&buff[0], nsteps, nrep,
+                                           amp_params, freq_params, nparams);
+    for (unsigned i = 0; i < nsteps; i++) {
+        check_value(expect2[i], buff[i], i);
+    }
+}
+
 template<typename Kernel>
 static YAML::Node time_run(unsigned nrep, unsigned nsteps)
 {
@@ -49,6 +116,11 @@ static YAML::Node time_run(unsigned nrep, unsigned nsteps)
         freq_params[i].v1 = Gen::rand_single(0, 0.05f);
         freq_params[i].v2 = Gen::rand_single(0, 0.01f);
     }
+    // Use a smaller repetition to make things go faster.
+    // This is a very rough value test anyway since we aren't
+    // paying much attention to the phase accumulation
+    test_values<Kernel>(1, nsteps, max_params, amp_params, freq_params);
+    test_values<Kernel>(3, nsteps, max_params, amp_params, freq_params);
 
     std::vector<float> buff(nsteps);
 
