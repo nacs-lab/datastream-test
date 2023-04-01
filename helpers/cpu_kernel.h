@@ -436,6 +436,30 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
                               const ChnParamFixed *params, unsigned nparams);
+
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single(float *out, unsigned nsteps, unsigned nrep,
+                         ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                                 const ChnParamMod *amp_params,
+                                 const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_chnblk_loop(float *out, unsigned nsteps, unsigned nrep,
+                                    const ChnParamMod *amp_params,
+                                    const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                                   const ChnParamMod *amp_params,
+                                   const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single_pbuf(float *out, unsigned nsteps, unsigned nrep,
+                              ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigned nrep,
+                                        const ChnParamMod *amp_params,
+                                        const ChnParamMod *freq_params,
+                                        unsigned nparams);
 };
 
 } // namespace sse2
@@ -515,6 +539,30 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
                               const ChnParamFixed *params, unsigned nparams);
+
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single(float *out, unsigned nsteps, unsigned nrep,
+                         ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                                 const ChnParamMod *amp_params,
+                                 const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_chnblk_loop(float *out, unsigned nsteps, unsigned nrep,
+                                    const ChnParamMod *amp_params,
+                                    const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                                   const ChnParamMod *amp_params,
+                                   const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single_pbuf(float *out, unsigned nsteps, unsigned nrep,
+                              ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigned nrep,
+                                        const ChnParamMod *amp_params,
+                                        const ChnParamMod *freq_params,
+                                        unsigned nparams);
 };
 
 } // namespace avx
@@ -589,6 +637,30 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
                               const ChnParamFixed *params, unsigned nparams);
+
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single(float *out, unsigned nsteps, unsigned nrep,
+                         ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                                 const ChnParamMod *amp_params,
+                                 const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_chnblk_loop(float *out, unsigned nsteps, unsigned nrep,
+                                    const ChnParamMod *amp_params,
+                                    const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                                   const ChnParamMod *amp_params,
+                                   const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single_pbuf(float *out, unsigned nsteps, unsigned nrep,
+                              ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigned nrep,
+                                        const ChnParamMod *amp_params,
+                                        const ChnParamMod *freq_params,
+                                        unsigned nparams);
 };
 
 } // namespace avx2
@@ -663,6 +735,30 @@ struct Kernel {
     NACS_EXPORT(ds_helper) static
     void sin_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
                               const ChnParamFixed *params, unsigned nparams);
+
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single(float *out, unsigned nsteps, unsigned nrep,
+                         ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_chn_loop(float *out, unsigned nsteps, unsigned nrep,
+                                 const ChnParamMod *amp_params,
+                                 const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_chnblk_loop(float *out, unsigned nsteps, unsigned nrep,
+                                    const ChnParamMod *amp_params,
+                                    const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop(float *out, unsigned nsteps, unsigned nrep,
+                                   const ChnParamMod *amp_params,
+                                   const ChnParamMod *freq_params, unsigned nparams);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_single_pbuf(float *out, unsigned nsteps, unsigned nrep,
+                              ChnParamMod amp_param, ChnParamMod freq_param);
+    NACS_EXPORT(ds_helper) static
+    void sin_ramp_multi_block_loop_pbuf(float *out, unsigned nsteps, unsigned nrep,
+                                        const ChnParamMod *amp_params,
+                                        const ChnParamMod *freq_params,
+                                        unsigned nparams);
 };
 
 } // namespace avx512
