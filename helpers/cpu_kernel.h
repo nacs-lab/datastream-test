@@ -389,7 +389,7 @@ struct Kernel {
     __m128d ramp_func(__m128d x, ChnParamMod param)
     {
         x = x * param.slope;
-        x = x - _mm_cvtepi64_pd(_mm_cvtpd_epi64(x));
+        x = x - _mm_cvtepi32_pd(_mm_cvtpd_epi32(x));
         return param.v0 + x * (param.v1 + x * param.v2);
     }
     NACS_EXPORT(ds_helper) static
@@ -468,7 +468,7 @@ struct Kernel {
     __m256d ramp_func(__m256d x, ChnParamMod param)
     {
         x = x * param.slope;
-        x = x - _mm256_cvtepi64_pd(_mm256_cvtpd_epi64(x));
+        x = x - _mm256_cvtepi32_pd(_mm256_cvtpd_epi32(x));
         return param.v0 + x * (param.v1 + x * param.v2);
     }
     NACS_EXPORT(ds_helper) static
@@ -542,7 +542,7 @@ struct Kernel {
     __m256d ramp_func(__m256d x, ChnParamMod param)
     {
         x = x * param.slope;
-        x = x - _mm256_cvtepi64_pd(_mm256_cvtpd_epi64(x));
+        x = x - _mm256_cvtepi32_pd(_mm256_cvtpd_epi32(x));
         return param.v0 + x * (param.v1 + x * param.v2);
     }
     NACS_EXPORT(ds_helper) static
